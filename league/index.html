@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Underhand Lab | RE | League</title>
+
+    <link rel="stylesheet" href="/style/style.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/14.8.1/math.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/decimal.js/10.4.3/decimal.js"></script>
+    <script src="/src/re/input/batter-input-component.js" type="module"></script>
+    <script src="/src/re/input/runner-input-component.js" type="module"></script>
+    <script src="/src/easy-h/module/import-html.js" type="module"></script>
+    <script src="/src/easy-h/ui/bottom-sheet.js" type="module"></script>
+    <script src="/src/markdown.js"></script>
+    <script src="./input.js" type="module" defer></script>
+    <style>
+        .input-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .input-group input {
+            max-width: 70px;
+        }
+
+        h3 {
+            margin-bottom: 0;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="nav">
+        <div>
+            <div style="flex-grow: 1">
+                <h1><a href="/">🧮</a></h1>
+            </div>
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1" style="flex-grow: 1">
+                <ul>
+                    <li>
+                        <a href="/league/" select="true">리그</a>
+                    </li>
+                    <li>
+                        <a href="/line-up/">타선 기반</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </div>
+    <div class="slider">
+        <div class="container neumorphism">
+            <button id="open-batter-league">리그 타격 기록 설정</button>
+            <button id="open-runner-league">리그 주자 능력 설정</button>
+        </div>
+    </div>
+    <div id="wrapper" style="padding-bottom: 80px;">
+        <div class="container neumorphism">
+            <div id="result-9re">
+            </div>
+            <p style="font-size: 0.9em; color: #666;">
+                ※ 입력하신 타격 스탯을 가진 타자들이 연속해서 타석에 들어선다고 가정할 때, 각각의 주자 상황, 아웃 카운트에서 기대되는 득점 값을 계산합니다.
+            </p>
+        </div>
+        <div class="container neumorphism">
+            <h1>✨ 리그 확장 가치</h1>
+            <hr>
+            <div>
+                <h1 id="league-woba-scale"></h1>
+                <h1 id="league-p-pa"></h1>
+                <p style="font-size: 0.9em; color: #666;">
+                    ※ wOBA Scale은 리그 평균 wOBA를 0.330으로 계산되도록 조정하는 값입니다.
+                    <br>
+                    ※ R/PA는 리그 전체 득점을 리그 전체 타석수로 나눈 값입니다. 계산에 사용된 리그 득점은 RE24 기반 추정값입니다.
+                </p>
+            </div>
+        </div>
+        <div class="container neumorphism">
+            <h1>✨ 개인 확장 가치</h1>
+            <hr>
+            <div>
+                <button id="open-batter-personal">개인 타격 기록 설정</button>
+                <hr>
+                <h1 id="personal-woba">가중 출루율</h1>
+                <hr>
+                <h1 id="personal-wraa">wraa</h1>
+                <h1 id="personal-wraa-custom">wraa(커스텀)</h1>
+                <p style="font-size: 0.9em; color: #666;">
+                    ※ wRAA는 모델 기반의 wOBA(아웃 대비 기대 득점)를 바탕으로, wRAA(커스텀)은 모델 기반 기대 득점 변화를 바탕으로 계산하여 약간의 오차가 있습니다.
+                </p>
+                <hr>
+                <h1 id="personal-wrcplus">wRC+</h1>
+                <h1 id="personal-wrcplus-custom">wRC+(커스텀)</h1>
+                <p style="font-size: 0.9em; color: #666;">
+                    ※ wRC+, wRC+(커스텀)은 파크팩터를 반영하지 않은 값입니다.
+                    <br>
+                    ※ wRC+는 wRAA를 기반으로, wRC+(커스텀)은 wRAA(커스텀)을 기반으로 계산하여 약간의 오차가 있습니다.
+                </p>
+            </div>
+
+        </div>
+        <div class="container neumorphism">
+            <h1>🎲 리그 RE24</h1>
+            <div id="result">
+            </div>
+        </div>
+        <div class="container neumorphism">
+            <h1>💎 리그 타구 가치</h1>
+            <div id="value">
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    </div>
+    <bottom-sheet data-state="close" background-class="panel frostedglassmorphism"
+        window-class="toggle container neumorphism" trigger-id="open-batter-personal">
+        <h1>개인 타격 기록</h1>
+        <hr>
+        <button class="close-btn">✕</button>
+        <button class="toggle-btn">-</button>
+        <batter-input id="batter-personal" class="content" inner-class="scrolled-content"
+            src="/template/batter-input.html">
+            <div>
+                <button class="save-csv">저장</button>
+                <input class='read-csv-file' type="file" accept=".csv" style="display:none;">
+                <button class="read-csv">불러오기</button>
+
+            </div>
+            <hr>
+        </batter-input>
+        <hr>
+    </bottom-sheet>
+
+    <bottom-sheet data-state="max" background-class="panel frostedglassmorphism"
+        window-class="toggle container neumorphism" trigger-id="open-batter-league" open="open">
+        <h1>리그 타격 기록</h1>
+        <hr>
+        <button class="close-btn">✕</button>
+        <button class="toggle-btn">-</button>
+        <batter-input id="batter-league" class="content" inner-class="scrolled-content"
+            src="/template/batter-input.html">
+            <div>
+                <button class="save-csv">저장</button>
+                <input class='read-csv-file' type="file" accept=".csv" style="display:none;">
+                <button class="read-csv">불러오기</button>
+
+            </div>
+            <hr>
+        </batter-input>
+        <hr>
+    </bottom-sheet>
+    <bottom-sheet data-state="close" background-class="panel frostedglassmorphism"
+        window-class="toggle container neumorphism" trigger-id="open-runner-league">
+        <h1>리그 주자 능력</h1>
+        <button class="close-btn">✕</button>
+        <button class="toggle-btn">-</button>
+        <hr>
+        <div class="content" style="text-align: center;">
+            <runner-input id="runner-league" class="scrolled-content" src="/template/runner-input.html">
+            </runner-input>
+        </div>
+        <hr>
+        </div>
+    </bottom-sheet>
+    <div id="guide" class="panel frostedglassmorphism" data-state="close">
+        <div class="pop-up container neumorphism">
+            <h1>도움말</h1>
+            <hr>
+            <div class="markdown-container content" data-markdown-file="../guide.md">
+            </div>
+            <hr>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+    <div id="model-state" class="panel frostedglassmorphism" data-state="close">
+        <div class="pop-up container neumorphism">
+            <h1>주자, 아웃카운트 전이 모델 시나리오</h1>
+            <hr>
+            <div class="markdown-container content" data-markdown-file="../model/model-state.md">
+            </div>
+            <hr>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+    <div id="model-run" class="panel frostedglassmorphism" data-state="close">
+        <div class="pop-up container neumorphism">
+            <h1>득점 전이 모델 시나리오</h1>
+            <hr>
+            <div class="markdown-container content" data-markdown-file="../model/model-run.md">
+            </div>
+            <hr>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+    <div id="model-not" class="panel frostedglassmorphism" data-state="close">
+        <div class="pop-up container neumorphism">
+            <h1>미반영 시나리오</h1>
+            <hr>
+            <div class="markdown-container content" data-markdown-file="../model/model-not.md">
+            </div>
+            <hr>
+            <button class="close-btn">닫기</button>
+        </div>
+    </div>
+</body>
+
+</html>
