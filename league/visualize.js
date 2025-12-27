@@ -207,9 +207,14 @@ export function visualize(ret, leagueBatter, runnerAbility,
 export function setPersonalBatterInput(personalBatterInput) {
 
     batterInput = personalBatterInput;
-    batterInput.setEvent(() => {
+
+    function func() {
         if (!ret_RE) return;
         visualizePersonal(batterInput.getAbilityRaw());
+    }
+    batterInput.setEvent(() => {
     });
+
+    func();
 
 }
