@@ -101,7 +101,7 @@ export class BatterInput extends HTMLElement {
         }
         if (attrName == "inner-class") {
             this.window.className = newVal;
-
+            return;
         }
     }
     
