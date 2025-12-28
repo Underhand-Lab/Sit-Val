@@ -1,11 +1,17 @@
 .slider {
     position: sticky;
-    bottom: 20px;
+    bottom: 0px;
     left: 0;
     right: 0;
     z-index: 3;
     padding: 0 20px;
+    width: calc(100% - 40px);
 }
+
+.slider > .container {
+    margin-top: 0;
+}
+
 input[type=range] {
     accent-color: var(--primary-color);
     margin: 10px auto;
