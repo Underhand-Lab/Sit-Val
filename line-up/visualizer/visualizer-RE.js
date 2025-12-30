@@ -22,7 +22,7 @@ export class VisualizerRE {
         this.ret = ret;
         this.element.querySelector('.result-re').innerHTML =
             this.visualizeRE(ret);
-
+        
     }
 
     visualizeRE(ret) {

@@ -15,7 +15,7 @@
     <script src="../src/easy-h/module/import-html.js" type="module"></script>
     <script src="../src/easy-h/ui/bottom-sheet.js" type="module"></script>
     <script src="../src/easy-h/ui/pop-up.js" type="module"></script>
-    <script src="../src/easy-h/lang/e-text-component.js" type="module"></script>
+    <script src="../src/easy-h/lang/component.js" type="module"></script>
 
     <script src="../src/re/input/batter-input-component.js" type="module"></script>
     <script src="../src/re/input/runner-input-component.js" type="module"></script>
@@ -54,8 +54,8 @@
             margin: 5px;
         }
     </style>
-    <e-text-set key="ko" src="../lang-src/kor.json"></e-text-set>
     <e-text-set key="en" src="../lang-src/eng.json"></e-text-set>
+    <e-text-set key="ko ko-KR ko-kr kor" src="../lang-src/kor.json"></e-text-set>
 
 </head>
 
@@ -139,7 +139,7 @@
     <bottom-sheet id="batter-list-input" data-state="close" background-class="panel frostedglassmorphism"
         window-class="toggle container neumorphism" trigger-id="open-batter-list-input" open="open">
         <div>
-            <h1><e-text key="label-batter-setting">타자 능력</e-text></h1>
+            <h1><e-text key="label-batter-setting">타자 설정</e-text></h1>
             <button class="toggle-btn">-</button>
             <button class="close-btn">✕</button>
         </div>
@@ -174,7 +174,7 @@
     </bottom-sheet>
 
     <bottom-sheet data-state="close" background-class="panel frostedglassmorphism"
-        window-class="toggle container neumorphism" trigger-id="open-runner-league-input">
+        window-class="toggle container neumorphism" trigger-id="open-runner-league">
         <h1>주자 정보</h1>
         <button class="toggle-btn">-</button>
         <button class="close-btn">✕</button>
@@ -190,9 +190,12 @@
 
     <bottom-sheet id="batter-pop-up" data-state="close" background-class="panel frostedglassmorphism"
         window-class="toggle container neumorphism">
-        <h1><e-text key="input-batter-personal">
+        <h1>
+            <e-text key="input-batter-personal">
                 개인 타격 기록
-            </e-text></h1>
+            </e-text>
+        </h1>
+        
         <button class="toggle-btn">-</button>
         <button class="close-btn">✕</button>
 
@@ -201,6 +204,7 @@
         <batter-input id="batter-input" class="content" inner-class="scrolled-content"
             src="../template/batter-input.html">
             <div>
+                <input class="player-name" type="text" value="batter" />
                 <button class="save-csv">
                     <e-text key="btn-save">저장</e-text>
                 </button>

@@ -1,63 +1,85 @@
-import { loadFile } from "../load-file.js";
-import * as lang from "./e-text.js"
-
-// 사전과 관찰 대상을 정적 자산으로 관리
-let dictionary = {};
-let observers = new Set(); // 배열보다 중복 제거가 쉬운 Set 권장
-
-class LangSet extends HTMLElement {
-    static get observedAttributes() { return ['src', 'key']; }
-
-    attributeChangedCallback(attrName, oldVal, newVal) {
-        if (attrName === 'key' && newVal) {
-            this.key = newVal;
-            this.addDictionary();
-            return;
-        }
-        if (attrName === 'src' && newVal) {
-            loadFile(newVal).then(text => {
-                this.dictionary = JSON.parse(text);
-                this.addDictionary();
-            }).catch((e) => {
-                console.error("언어 파일 로드 실패:", e);
-            });
-        }
-    }
-
-    addDictionary() {
-        if (!this.key) return;
-        if (!this.dictionary) return;
-        lang.addDictionary(this.key, this.dictionary);
-
-    }
-}
+import * as lang from "./e-text.js";
 
 class Lang extends HTMLElement {
     constructor() {
         super();
         this.content = this;
         this._key = "";
+        this._originalChildren = [];
+        this._isReady = false; // 자식 요소 확보 여부 플래그
     }
 
-    static get observedAttributes() { return ['tag', 'key']; }
+    static get observedAttributes() {
+        return ['key', 'tag'];
+    }
+
+    saveOriginalChildren() {
+        if (this._isReady || this._originalChildren.length > 0) return;
+
+        // 현재 e-text 내부의 자식들을 가져옴
+        const children = Array.from(this.childNodes);
+        this._isReady = true; // 이제 준비됨
+
+        if (children.length > 0) {
+            this._originalChildren = children.filter(node => {
+                if (node.nodeType === Node.ELEMENT_NODE)
+                    return node !== this.content;
+                if (node.nodeType === Node.TEXT_NODE) {
+                    // 비어있지 않거나 공백만 있는 게 아닌 텍스트 노드만 유지
+                    return node.textContent.trim().length > 0;
+                }
+                return false;
+            });
+        }
+    }
 
     onChange() {
-        if (!this._key) return;
-        // 사전 확인 및 값 교체
-        const translated = (lang.dictionary && this._key in lang.dictionary)
-            ? lang.dictionary[this._key]
-            : this.content.innerHTML;
+        // 중요: 준비가 안 됐거나 key가 없으면 실행하지 않음
+        if (!this._isReady || !this._key) return;
 
-        if (this.content) {
+        const translated = lang.getTranslation(this._key);
+        if (!this.content) return;
+
+        if (translated.match(/\{\d+\}/)) {
+            this.renderFormatted(translated);
+        } else {
             this.content.innerHTML = translated;
         }
     }
 
+    renderFormatted(template) {
+        const parts = template.split(/(\{\d+\})/g);
+        const fragment = document.createDocumentFragment();
+
+        parts.forEach(part => {
+            const match = part.match(/^\{(\d+)\}$/);
+            if (match) {
+                const index = parseInt(match[1]);
+                const targetNode = this._originalChildren[index];
+                if (targetNode) {
+                    // cloneNode(true)를 쓰면 이벤트 리스너가 날아갈 수 있으므로 
+                    // 원본을 이동시킵니다. (onChange마다 이 원본은 fragment로 이동함)
+                    fragment.appendChild(targetNode);
+                }
+            } else if (part.length > 0) {
+                fragment.appendChild(document.createTextNode(part));
+            }
+        });
+
+        this.content.innerHTML = '';
+        this.content.appendChild(fragment);
+    }
+
     connectedCallback() {
-        lang.addObserver(this); // 관찰자 등록
+        // DOM에 추가된 후 자식들을 파싱할 시간을 줌
+        requestAnimationFrame(() => {
+            this.saveOriginalChildren();
+            lang.addObserver(this);
+        });
     }
 
     disconnectedCallback() {
+        lang.removeObserver(this);
     }
 
     attributeChangedCallback(attrName, oldVal, newVal) {
@@ -65,7 +87,8 @@ class Lang extends HTMLElement {
 
         if (attrName === "key") {
             this._key = newVal;
-            this.onChange();
+            // 준비된 상태일 때만 onChange 호출
+            if (this._isReady) this.onChange();
         } else if (attrName === 'tag') {
             this.renderTag(newVal);
         }
@@ -88,5 +111,4 @@ class Lang extends HTMLElement {
     }
 }
 
-customElements.define('e-text-set', LangSet);
 customElements.define('e-text', Lang);

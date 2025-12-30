@@ -1,59 +1,92 @@
 const dictdict = {};
-
-// 사전과 관찰 대상을 정적 자산으로 관리
-export let dictionary = {};
 let langKey = 'en';
-const defaultKey = 'en';
+let defaultKey = null;
+let observers = new Set();
+let pendingKey = null;
 
-let observers = new Set(); // 배열보다 중복 제거가 쉬운 Set 권장
+// 로딩 추적을 위한 상태 변수
+let pendingSources = new Set();
 
-function notify() {
-    observers.forEach(obs => obs.onChange());
+function isLoaded() {
+    if (pendingSources.size === 0) return true;
+    if (langKey && langKey in dictdict) return true;
+    
+    return false;
 }
 
-export function addDictionary(key, dict) {
-    const keys = key.split(" ");
+/** 관찰자에게 알림 */
+function notify() {
+    if (!isLoaded()) return;
+    
+    observers.forEach(obs => {
+        if (typeof obs.onChange === 'function') obs.onChange();
+    });
+}
 
-    for (let i = 0; i < keys.length; i++) {
-        dictdict[keys[i]] = dict;
+/** [중요] 로드 상태 추적 함수들 */
+export function registerPendingSource(src) {
+    pendingSources.add(src);
+}
+
+export function resolvePendingSource(src) {
+    pendingSources.delete(src);
+    notify();
+}
+
+export function getTranslation(key) {
+
+    if (dictdict[langKey] && key in dictdict[langKey]) {
+        return dictdict[langKey][key];
     }
     
-    if (langKey in dictdict) {
-        dictionary = dictdict[langKey];
+    // 2. 기본 언어(default) 사전 확인
+    if (defaultKey && dictdict[defaultKey] && key in dictdict[defaultKey]) {
+        return dictdict[defaultKey][key];
     }
-    else {
-        dictionary = dictdict[defaultKey];
+
+    return key;
+}
+
+export function addDictionary(key, dict, src) {
+    const keys = key.split(" ");
+    
+    // HTML에 작성된 e-text-set 중 첫 번째 요소의 src를 가져옴
+    const firstSet = document.querySelector('e-text-set');
+    const firstSrc = firstSet ? firstSet.getAttribute('src') : null;
+
+    // 현재 로드된 src가 HTML상 첫 번째 src와 일치한다면 이 녀석이 주인공(default)
+    if (defaultKey == null && src === firstSrc) {
+        defaultKey = keys[0];
+    }
+
+    for (let k of keys) {
+        dictdict[k] = dict;
+    }
+
+    if (pendingKey && keys.includes(pendingKey)) {
+        langKey = pendingKey;
+        pendingKey = null;
     }
     notify();
 }
 
 export function setKey(key) {
     langKey = key;
-    if (langKey in dictdict) {
-        dictionary = dictdict[langKey];
-    }
-    else {
-        dictionary = dictdict[defaultKey];
-    }
     notify();
 }
 
 export function addObserver(observer) {
     observers.add(observer);
-    observer.onChange();     // 최초 실행 (이미 사전이 로드되어 있을 수 있음)
+    if (!isLoaded()) return;
+    if (typeof observer.onChange === 'function') observer.onChange();
 }
 
-export function removeObserver() {
-    observers.delete(this); // 메모리 누수 방지: 요소 삭제 시 관찰 제거
-
+export function removeObserver(observer) {
+    observers.delete(observer);
 }
 
 const urlParams = new URLSearchParams(window.location.search);
 const urlLang = urlParams.get('lang');
 
-if (urlLang)
-    setKey(urlLang);
-else {
-    const lang = navigator.language;
-    setKey(lang);
-}
+if (urlLang) langKey = urlLang;
+else langKey = navigator.language.split('-')[0];

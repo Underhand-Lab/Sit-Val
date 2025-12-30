@@ -16,7 +16,8 @@
     <script src="../src/re/input/runner-input-component.js" type="module"></script>
 
     <script src="../src/easy-h/module/import-html.js" type="module"></script>
-    <script src="../src/easy-h/lang/e-text-component.js" type="module"></script>
+    <script src="../src/easy-h/lang/component.js" type="module"></script>
+
     <script src="../src/easy-h/ui/bottom-sheet.js" type="module"></script>
     <script src="../src/easy-h/ui/pop-up.js" type="module"></script>
     <script src="../src/markdown.js"></script>
@@ -39,8 +40,8 @@
             margin-bottom: 0;
         }
     </style>
-    <e-text-set key="ko" src="../lang-src/kor.json"></e-text-set>
     <e-text-set key="en" src="../lang-src/eng.json"></e-text-set>
+    <e-text-set key="ko ko-KR ko-kr" src="../lang-src/kor.json"></e-text-set>
 
 </head>
 
@@ -132,7 +133,7 @@
     <bottom-sheet data-state="max" background-class="panel frostedglassmorphism"
         window-class="toggle container neumorphism" trigger-id="open-batter-league" open="open">
         <h1>
-            <e-text key="input-runner">
+            <e-text key="input-batter-league">
                 리그 타격 기록
             </e-text>
         </h1>

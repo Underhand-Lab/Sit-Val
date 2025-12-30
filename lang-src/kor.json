@@ -119,7 +119,7 @@
     "label-batter-num-8": "8번 타자",
     "label-batter-num-9": "9번 타자",
 
-    "label-re24-for": "의 RE24",
+    "label-re24-for": "{0}의 RE24",
     "label-leadoff-hitters-by-inning": "선두타자 분석",
     "label-batting-order": "타순",
     "label-start-probability": "시작 확률",
