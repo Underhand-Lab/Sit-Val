@@ -5,7 +5,6 @@ export class BatterInput extends HTMLElement {
     constructor() {
         super();
         this.binded = false;
-        this.window = document.createElement('div');
     }
 
     setEvent(event) {
@@ -64,7 +63,7 @@ export class BatterInput extends HTMLElement {
     }
 
     static get observedAttributes() {
-        return ['src', 'inner-class'];
+        return ['src'];
     }
 
     setAfterBindInput(event) {
@@ -76,13 +75,13 @@ export class BatterInput extends HTMLElement {
     }
 
     connectedCallback() {
-        this.appendChild(this.window);
+
     }
 
     attributeChangedCallback(attrName, oldVal, newVal) {
         if (attrName == "src") {
             loadFile(newVal).then((html) => {
-                this.window.innerHTML = html;
+                this.innerHTML = html;
 
                 // 2. 브라우저가 새로운 DOM 요소를 인지하고 렌더링 트리에 올릴 때까지 대기
                 requestAnimationFrame(() => {
@@ -97,10 +96,6 @@ export class BatterInput extends HTMLElement {
                 console.error(error);
                 this.insertAdjacentHTML('beforeend', `<p style="color:red;">로딩 실패</p>`);
             });
-            return;
-        }
-        if (attrName == "inner-class") {
-            this.window.className = newVal;
             return;
         }
     }

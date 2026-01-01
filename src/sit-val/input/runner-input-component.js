@@ -4,11 +4,6 @@ class RunnerInput extends HTMLElement {
     constructor() {
         super();
         this.binded = false;
-        this.window = document.createElement('div');
-    }
-
-    static get observedAttributes() {
-        return [];
     }
 
     setEvent(event) {
@@ -22,7 +17,7 @@ class RunnerInput extends HTMLElement {
     }
 
     static get observedAttributes() {
-        return ['src', 'inner-class'];
+        return ['src'];
     }
 
     setAfterBindInput(event) {
@@ -36,7 +31,7 @@ class RunnerInput extends HTMLElement {
     attributeChangedCallback(attrName, oldVal, newVal) {
         if (attrName == "src") {
             loadFile(newVal).then((html) => {
-                this.window.innerHTML = html;
+                this.innerHTML = html;
 
                 // 2. 브라우저가 새로운 DOM 요소를 인지하고 렌더링 트리에 올릴 때까지 대기
                 requestAnimationFrame(() => {
@@ -52,13 +47,13 @@ class RunnerInput extends HTMLElement {
             return;
         }
         if (attrName == "inner-class") {
-            this.window.className = newVal;
+
             return;
         }
     }
 
     connectedCallback() {
-        this.appendChild(this.window);
+
     }
 
     bindInput() {
