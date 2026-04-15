@@ -9,7 +9,7 @@ const Navigation = () => {
 
     return (
         <nav>
-            <div style={{padding: '5px', paddingTop: '15px'}}>
+            <div style={{padding: '2px', paddingTop: '12px'}}>
                 <div style={{ flexGrow: 1 }}>
                     <NavLink to="/">Sit-Val</NavLink>
                 </div>

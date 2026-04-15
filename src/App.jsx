@@ -8,7 +8,7 @@ import HomePage from './pages/HomePage';
 function App() {
   return (
     <Router basename="/sit-val">
-      <div className="app-shell" style={{ minHeight: '100vh', background: '#f8f9fa' }}>
+      <div className="app-shell" style={{ minHeight: '100vh', width: '100%', background: '#f8f9fa' }}>
         {/* 공통 네비게이션: App.jsx에서 일괄 관리 */}
         <Navigation />
         
