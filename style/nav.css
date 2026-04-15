@@ -88,6 +88,6 @@ nav a:hover::after, .nav a:hover::after {
     width: min(100%, 30px);
 }
 
-nav a[select="true"], .nav a[select="true"] {
+nav a.active, .nav a.active {
     color: var(--primary-color);
 }

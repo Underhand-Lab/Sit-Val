@@ -1,4 +1,4 @@
-import * as Calc from "../../src/sabermetrics/calc.js";
+import * as Calc from "../../src/lib/sabermetrics/calc.js";
 
 function round(value, cnt) {
     let c = 1

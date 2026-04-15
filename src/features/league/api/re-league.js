@@ -1,6 +1,6 @@
 import { createFundamentalMatrix, getExpectedRewards, getVariance }
-    from "../src/markov/markov-mrp.js";
-import { matrixBuilder } from "../src/sit-val/matrix-builder.js";
+    from "../../../lib/markov/markov-mrp.js";
+import { matrixBuilder } from "../../../lib/sit-val/matrix-builder.js";
 
 const stateManager = {
     getIndex(b_idx, out, b3, b2, b1) {

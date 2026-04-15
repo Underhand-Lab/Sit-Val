@@ -13,6 +13,24 @@
 }
 
 body {
+    padding: 0;
+    margin: 0;
+}
+
+.input-group input {
+    max-width: 70px;
+}
+
+.input-form {
+    display:flex;
+    flex-direction: row;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 20px;
+}
+
+#root {
     width: 100%;
     height: 100%;
     font-family: 'KBO-Dia-Gothic_medium', Arial, sans-serif;
@@ -27,6 +45,10 @@ body {
     flex-direction: column;
     min-height: 100vh;
     word-break: keep-all;
+}
+
+h3 {
+    margin-bottom: 0;
 }
 
 :root {

@@ -6,7 +6,9 @@ window.addEventListener('load', function () {
     window.addEventListener("scroll", () => {
         const currentScrollY = window.scrollY;
         const THRESHOLD = 10;
-
+        if (!navbar) {
+            return;
+        }
         if (Math.abs(currentScrollY - lastScrollY) < THRESHOLD) return;
         if (currentScrollY <= 0) {
             navbar.classList.remove("hidden");
