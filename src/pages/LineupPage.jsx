@@ -5,10 +5,11 @@ import VisualizerBox from '../components/VisualizerBox'
 import LeadoffVisualizer from '../features/league/components/LeadoffVisualizer'
 import Lineup9RE from '../features/lineup/components/Lineup9RE'
 import LineupRE24 from '../features/lineup/components/LineupRE24'
-import BigInningVisualizer from '../features/league/components/BigInningVisualizer'
+import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
 import BatterInput from '../components/BatterInput'
 import RunnerInput from '../components/RunnerInput'
 import BottomSheet from '../components/BottomSheet'
+import Popup from '../components/Popup'; // Popup 컴포넌트 임포트
 
 function LineupPage() {
   const batterRef = useRef(null)
@@ -135,18 +136,19 @@ function LineupPage() {
 
         {/* 도구 선택 팝업 */}
         <div className={`bottom-sheet-overlay ${isToolMenuOpen ? 'active' : ''}`} onClick={() => setIsToolMenuOpen(false)} />
-        <div className={`center-popup ${isToolMenuOpen ? 'active' : ''}`}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3>분석 도구 추가</h3>
-            <button onClick={() => setIsToolMenuOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
-          </div>
+
+        <Popup
+          isOpen={isToolMenuOpen}
+          onClose={() => setIsToolMenuOpen(false)}
+          title="분석 도구 추가"
+        >
           <div className="tool-grid">
             <button className="neumorphism-button" onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</button>
             <button className="neumorphism-button" onClick={() => addTool(Lineup9RE)}>팀 기대 득점</button>
             <button className="neumorphism-button" onClick={() => addTool(LineupRE24)}>팀 RE24</button>
-            <button className="neumorphism-button" onClick={() => addTool(BigInningVisualizer, { isLineup: true })}>빅이닝 확률</button>
+            <button className="neumorphism-button" onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</button>
           </div>
-        </div>
+        </Popup>
 
         {/* 선수 명단 바텀 시트 */}
         <BottomSheet
@@ -217,37 +219,6 @@ function LineupPage() {
             onDataChange={handleBatterDataChange}
           />
         </BottomSheet>
-
-        <style>{`
-        .center-popup {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: #f8f9fa; z-index: 1100; padding: 25px; border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 90%; max-width: 400px;
-          display: none;
-        }
-        .center-popup.active { display: block; }
-        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .tool-grid button { width: 100%; }
-        
-        /* 주자 설정 슬라이더 스타일 유지 */
-        input[type='range'] {
-          -webkit-appearance: none;
-          height: 8px;
-          background: #e0e0e0;
-          border-radius: 5px;
-          box-shadow: inset 2px 2px 5px #bebebe, inset -2px -2px 5px #ffffff;
-          width: 100%;
-        }
-        input[type='range']::-webkit-slider-thumb {
-          -webkit-appearance: none;
-          width: 20px; height: 20px;
-          background: #f0f0f0;
-          border-radius: 50%;
-          box-shadow: 2px 2px 5px #bebebe, -2px -2px 5px #ffffff;
-          cursor: pointer;
-          border: 1px solid #ddd;
-        }
-      `}</style>
       </div>
 
       <div className="slider">

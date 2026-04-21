@@ -166,6 +166,12 @@ th {
     flex: 1;
 }
 
+main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
 #process-button {
     padding: 12px 24px;
     margin: 0;

@@ -8,9 +8,11 @@ import Visualizer9RE from '../features/league/components/Visualizer9RE';
 import RE24Visualizer from '../features/league/components/RE24Visualizer';
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
 import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
-import BigInningVisualizer from '../features/league/components/BigInningVisualizer';
+import LeagueBigInningVisualizer from '../features/league/components/LeagueBigInningVisualizer';
+import PersonalVisualizer from '../features/league/components/PersonalVisualizer.jsx'
 import BatterInput from '../components/BatterInput';
 import RunnerInput from '../components/RunnerInput';
+import Popup from '../components/Popup'; // Import the new Popup component
 import BottomSheet from '../components/BottomSheet';
 
 function LeaguePage() {
@@ -58,6 +60,7 @@ function LeaguePage() {
     { id: 2, Component: RE24Visualizer },
     { id: 3, Component: LeagueVisualizer },
     { id: 4, Component: RunValueVisualizer },
+    { id: 5, Component: PersonalVisualizer },
   ])
   const [vizData, setVizData] = useState(null)
 
@@ -162,33 +165,21 @@ function LeaguePage() {
           />
         </BottomSheet>
 
-        {/* 도구 선택 팝업 */}
-        <div className={`bottom-sheet-overlay ${isToolMenuOpen ? 'active' : ''}`} onClick={() => setIsToolMenuOpen(false)} />
-        <div className={`center-popup ${isToolMenuOpen ? 'active' : ''}`}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h3>분석 도구 추가</h3>
-            <button onClick={() => setIsToolMenuOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>✕</button>
+        {/* 도구 선택 팝업 (Popup 컴포넌트 사용) */}
+        <Popup
+          isOpen={isToolMenuOpen}
+          onClose={() => setIsToolMenuOpen(false)}
+          title="분석 도구 추가"
+        >
+          <div className="tool-grid"> {/* Add tool-grid class for styling */}
+            <button onClick={() => addTool(Visualizer9RE)}>9RE (기대 득점)</button>
+            <button onClick={() => addTool(RE24Visualizer)}>RE24 상황판</button>
+            <button onClick={() => addTool(LeagueVisualizer)}>리그 확장 지표</button>
+            <button onClick={() => addTool(RunValueVisualizer)}>타구 가치 분석</button>
+            <button onClick={() => addTool(PersonalVisualizer)}>리그 개인 가치</button>
+            <button onClick={() => addTool(LeagueBigInningVisualizer)}>빅이닝 확률</button>
           </div>
-          <div className="tool-grid">
-            <button className="neumorphism-button" onClick={() => addTool(Visualizer9RE)}>9RE (기대 득점)</button>
-            <button className="neumorphism-button" onClick={() => addTool(RE24Visualizer)}>RE24 상황판</button>
-            <button className="neumorphism-button" onClick={() => addTool(LeagueVisualizer)}>리그 확장 지표</button>
-            <button className="neumorphism-button" onClick={() => addTool(RunValueVisualizer)}>타구 가치 분석</button>
-            <button className="neumorphism-button" onClick={() => addTool(BigInningVisualizer)}>빅이닝 확률</button>
-          </div>
-        </div>
-
-        <style>{`
-        .center-popup {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: #f8f9fa; z-index: 1100; padding: 25px; border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 90%; max-width: 400px;
-          display: none;
-        }
-        .center-popup.active { display: block; }
-        .tool-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        
-      `}</style>
+        </Popup>
       </div>
 
       <div className="slider">
