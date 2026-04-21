@@ -8,6 +8,10 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
     const startHeight = sheetHeight;
 
     const onMove = (moveEvent) => {
+      // 리사이즈 도중 배경이 스크롤되거나 움직이는 것을 방지
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
+      }
       const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0].clientY);
       const delta = startY - currentY;
       const newHeight = Math.max(250, Math.min(window.innerHeight * 0.9, startHeight + delta));
@@ -76,8 +80,15 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
       }
       .bottom-sheet-container.active { transform: translateY(0); }
       .bottom-sheet-handle {
+        width: 100%; height: 32px; /* 터치 영역 확대 */
+        display: flex; justify-content: center; align-items: center;
+        margin: -10px 0 10px 0; cursor: ns-resize;
+        touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 방지 */
+      }
+      .bottom-sheet-handle::after {
+        content: '';
         width: 40px; height: 5px; background: #ccc;
-        border-radius: 3px; margin: -10px auto 15px; cursor: ns-resize;
+        border-radius: 3px;
       }
     `}} />
 

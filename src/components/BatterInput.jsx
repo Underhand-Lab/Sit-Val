@@ -153,7 +153,6 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
           </div>
         </div>
       </div>
-      <hr />
 
     </div>
   );
