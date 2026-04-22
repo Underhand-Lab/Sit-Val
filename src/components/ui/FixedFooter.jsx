@@ -17,8 +17,7 @@ const styles = {
         left: 0,
         right: 0,
         zIndex: 3,
-        padding: '20px 20px',
-        width: 'calc(100% - 40px)',
+        padding: '20px 0',
     },
 };
 
