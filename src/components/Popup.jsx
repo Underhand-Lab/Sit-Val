@@ -1,34 +1,48 @@
 import React from 'react';
+import {Div, H3, Button} from './ui/UI.jsx';
+
 
 const Popup = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
     <>
-      <div className="bottom-sheet-overlay active" onClick={onClose} />
-      <div className={`pop-up neumorphism`} style={{ display: 'block' }}>
-        <h3>{title}</h3>
-        <div className="content">
+      <Div style={styles.overlay} onClick={onClose} />
+      <Div style={styles.popup}>
+        <H3 style={{marginTop: 0}}>{title}</H3>
+        <Div style={styles.content}>
           {children}
-        </div>
-        <button onClick={onClose}>닫기</button>
-      </div>
-      {/* Styles for the popup and overlay. These could be moved to a global CSS file if preferred. */}
-      <style>{`
-      .pop-up {
-          position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-          background: #f8f9fa; z-index: 1100; border-radius: 20px;
-          box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 90%; max-width: 400px;
-          text-align: center;
-          display: block; /* Always block when isOpen is true, controlled by parent */
-        }
-        .pop-up .content {
-            margin-bottom: 20px;
-            /* Add any specific styling for the content area if needed */
-        }
-        `}</style>
+        </Div>
+        <Button onClick={onClose}>닫기</Button>
+      </Div>
     </>
   );
+};
+
+const styles = {
+  overlay: {
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    zIndex: 1100,
+  },
+  popup: {
+    position: 'fixed',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: '#f8f9fa',
+    zIndex: 1101,
+    borderRadius: '20px',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+    width: '90%',
+    maxWidth: '400px',
+    textAlign: 'center',
+    padding: '20px',
+  },
+  content: {
+    margin: '20px 0',
+  },
 };
 
 export default Popup;

@@ -50,7 +50,7 @@ const styles = {
         top: 0,
         left: 0,
         right: 0,
-        backgroundColor: 'var(--secondary-color)',
+        backgroundColor: vars.secondary,
         color: '#aaaaaa',
         fontSize: '15px',
         margin: 0,
@@ -60,7 +60,7 @@ const styles = {
         marginBottom: '20px',
     },
     navContent: {
-        padding: '12px',
+        padding: '5px',
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'center'

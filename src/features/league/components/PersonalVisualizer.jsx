@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import BatterInput from '../../../components/BatterInput';
 import BottomSheet from '../../../components/BottomSheet';
-import { Box, Div, H3 } from '../../../components/ui/UI.jsx';
+import { Box, Div, H3, Button } from '../../../components/ui/UI.jsx';
 
 
 const PersonalVisualizer = ({ data }) => {
@@ -137,13 +137,12 @@ const PersonalVisualizer = ({ data }) => {
         </p>
       </Div>
 
-      <button
-        className="neumorphism-button"
+      <Button
+        className="neumorphism-Button"
         onClick={() => setIsBatterOpen(true)}
-        style={{ padding: '5px 15px', fontSize: '0.85em' }}
       >
         대상 선수 성적 수정
-      </button>
+      </Button>
 
       <BottomSheet
         isOpen={isBatterOpen}

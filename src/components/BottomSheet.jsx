@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Div } from './ui/UI';
 
 const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) => {
   const [sheetHeight, setSheetHeight] = useState(initialHeight);
@@ -35,23 +36,30 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
 
   return (
     <>
-      <div className="bottom-sheet-overlay active" onClick={onClose} />
-      <div 
-        className="bottom-sheet-container active" 
-        style={{ height: `${sheetHeight}px`, transition: 'none' }}
+      <Div 
+        style={{...styles.overlay, ...(isOpen ? styles.activeOverlay : {})}} 
+        onClick={onClose} 
+      />
+      <Div 
+        style={{ 
+          ...styles.container, 
+          ...(isOpen ? styles.activeContainer : {}),
+          height: `${sheetHeight}px`, 
+          transition: isOpen ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none' 
+        }}
       >
-        <div 
-          className="bottom-sheet-handle" 
+        <Div 
           onMouseDown={handleResizeStart} 
           onTouchStart={handleResizeStart} 
-          style={{ cursor: 'ns-resize' }} 
-        />
-        <div className="bottom-sheet-header" style={{ padding: '0 20px', marginBottom: '15px' }}>
+          style={styles.handle} 
+        >
+          <Div style={styles.handleDash} />
+        </Div>
+        <Div className="bottom-sheet-header" style={{ padding: '0 20px', marginBottom: '15px' }}>
           <h3 style={{ margin: 0 }}>{title}</h3>
-        </div>
+        </Div>
         <hr/>
-        <div 
-          className="bottom-sheet-content" 
+        <Div 
           style={{ 
             padding: '0 20px 20px 20px', 
             height: `${sheetHeight - 80}px`, 
@@ -60,40 +68,39 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
           }}
         >
           {children}
-        </div>
-      </div>
-    <style dangerouslySetInnerHTML={{ __html: `
-      .bottom-sheet-overlay {
-        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-        background: rgba(0,0,0,0.4); z-index: 1000;
-        opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
-      }
-      .bottom-sheet-overlay.active { opacity: 1; pointer-events: auto; }
-      .bottom-sheet-container {
-        position: fixed; bottom: 0; left: 0; right: 0;
-        background: #f8f9fa; z-index: 1001;
-        padding: 20px; border-radius: 20px 20px 0 0;
-        box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
-        transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        max-height: 90vh; /* Adjusted for better mobile experience */
-        overflow: hidden; /* Content div handles scroll */
-      }
-      .bottom-sheet-container.active { transform: translateY(0); }
-      .bottom-sheet-handle {
-        width: 100%; height: 32px; /* 터치 영역 확대 */
-        display: flex; justify-content: center; align-items: center;
-        margin: -10px 0 10px 0; cursor: ns-resize;
-        touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 방지 */
-      }
-      .bottom-sheet-handle::after {
-        content: '';
-        width: 40px; height: 5px; background: #ccc;
-        border-radius: 3px;
-      }
-    `}} />
-
+        </Div>
+      </Div>
     </>
   );
+};
+
+const styles = {
+  overlay: {
+    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.4)', zIndex: 1000,
+    opacity: 0, pointerEvents: 'none', transition: 'opacity 0.3s ease',
+  },
+  activeOverlay: { opacity: 1, pointerEvents: 'auto' },
+  container: {
+    position: 'fixed', bottom: 0, left: 0, right: 0,
+    background: '#f8f9fa', zIndex: 1001,
+    padding: '20px', borderRadius: '20px 20px 0 0',
+    boxShadow: '0 -5px 20px rgba(0,0,0,0.1)',
+    transform: 'translateY(100%)',
+    maxHeight: '90vh',
+    overflow: 'hidden',
+  },
+  activeContainer: { transform: 'translateY(0)' },
+  handle: {
+    width: '100%', height: '32px',
+    display: 'flex', justifyContent: 'center', alignItems: 'center',
+    margin: '-10px 0 10px 0', cursor: 'ns-resize',
+    touchAction: 'none',
+  },
+  handleDash: {
+    width: '40px', height: '5px', background: '#ccc',
+    borderRadius: '3px',
+  }
 };
 
 export default BottomSheet;

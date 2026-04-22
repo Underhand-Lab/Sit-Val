@@ -144,10 +144,10 @@ function LineupPage() {
           title="분석 도구 추가"
         >
           <Div className="tool-grid">
-            <button onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</button>
-            <button onClick={() => addTool(Lineup9RE)}>팀 기대 득점</button>
-            <button onClick={() => addTool(LineupRE24)}>팀 RE24</button>
-            <button onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</button>
+            <Button onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</Button>
+            <Button onClick={() => addTool(Lineup9RE)}>팀 기대 득점</Button>
+            <Button onClick={() => addTool(LineupRE24)}>팀 RE24</Button>
+            <Button onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</Button>
           </Div>
         </Popup>
 
@@ -161,11 +161,11 @@ function LineupPage() {
             {players.map(p => (
               <Div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
                 <span>{p.name}</span>
-                <button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p)}>편집</button>
+                <Button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p)}>편집</Button>
               </Div>
             ))}
           </Div>
-          <button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddPlayer}>선수 추가</button>
+          <Button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddPlayer}>선수 추가</Button>
         </BottomSheet>
 
         {/* 타순 설정 바텀 시트 */}
@@ -192,7 +192,7 @@ function LineupPage() {
               </Div>
             ))}
           </Div>
-          <button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</button>
+          <Button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</Button>
         </BottomSheet>
 
         {/* 주자 설정 바텀 시트 */}
@@ -225,10 +225,10 @@ function LineupPage() {
       <FixedFooter>
         <Box className="container">
           <Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button onClick={() => setPlayerListOpen(true)}>선수 명단</button>
-            <button onClick={() => setLineupEditOpen(true)}>타순 설정</button>
-            <button onClick={() => setRunnerOpen(true)}>주자 설정</button>
-            <button onClick={() => setIsToolMenuOpen(true)} style={{ marginLeft: 'auto' }}>도구 추가</button>
+            <Button onClick={() => setPlayerListOpen(true)}>선수 명단</Button>
+            <Button onClick={() => setLineupEditOpen(true)}>타순 설정</Button>
+            <Button onClick={() => setRunnerOpen(true)}>주자 설정</Button>
+            <Button onClick={() => setIsToolMenuOpen(true)} style={{ marginLeft: 'auto' }}>도구 추가</Button>
           </Div>
         </Box>
       </FixedFooter>

@@ -77,9 +77,10 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
       style={{ flex: 1, overflowY: 'auto' }}
     >
 
-      <div style={{display: 'flex', flexDirection: 'column', padding: '20px', gap: '20px'}}>
-        <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
-            justifyContent: 'center', gap: '15px'
+      <div style={{ display: 'flex', flexDirection: 'column', padding: '20px', gap: '20px' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
+          justifyContent: 'center', gap: '15px'
         }}>
           <div >타석: {pa}</div>
           <div >타수: {ab}</div>
@@ -87,16 +88,17 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
           <div >출루: {ob}</div>
           <div >장타수: {tb}</div>
         </div>
-        <div style={{display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
-            justifyContent: 'center', gap: '15px'
+        <div style={{
+          display: 'flex', flexDirection: 'row', flexWrap: 'wrap',
+          justifyContent: 'center', gap: '15px'
         }}>
-            <div >타율: {avg.toFixed(3)}</div>
-            <div >출루율: {obp.toFixed(3)}</div>
-            <div >장타율: {slg.toFixed(3)}</div>
-            <div >OPS: {ops.toFixed(3)}</div>
+          <div >타율: {avg.toFixed(3)}</div>
+          <div >출루율: {obp.toFixed(3)}</div>
+          <div >장타율: {slg.toFixed(3)}</div>
+          <div >OPS: {ops.toFixed(3)}</div>
         </div>
       </div>
-      <hr/>
+      <hr />
 
       {/* 안타 섹션 */}
       <div>
@@ -134,23 +136,23 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
         <div className="input-form">
           <div className="input-group">
             삼진 아웃
-            <InputNumber name="so" value={stats.so} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="so" value={stats.so} onChange={handleChange} />
           </div>
           <div className="input-group">
             땅볼 아웃
-            <InputNumber name="go" value={stats.go} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="go" value={stats.go} onChange={handleChange} />
           </div>
           <div className="input-group">
             뜬공 아웃
-            <InputNumber name="fo" value={stats.fo} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="fo" value={stats.fo} onChange={handleChange} />
           </div>
           <div className="input-group">
             희생플라이
-            <InputNumber name="sf" value={stats.sf || 0} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="sf" value={stats.sf || 0} onChange={handleChange} />
           </div>
           <div className="input-group">
             희생번트
-            <InputNumber name="sh" value={stats.sh || 0} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="sh" value={stats.sh || 0} onChange={handleChange} />
           </div>
         </div>
       </div>
