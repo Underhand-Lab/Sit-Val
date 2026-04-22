@@ -10,6 +10,7 @@ import BatterInput from '../components/BatterInput'
 import RunnerInput from '../components/RunnerInput'
 import BottomSheet from '../components/BottomSheet'
 import Popup from '../components/Popup'; // Popup 컴포넌트 임포트
+import { Box, Div, H3, Button, FixedFooter } from '../components/ui/UI.jsx';
 
 function LineupPage() {
   const batterRef = useRef(null)
@@ -125,29 +126,29 @@ function LineupPage() {
 
   return (
     <>
-      <div id="wrapper">
-        <div id="boxes">
+      <Div id="wrapper">
+        <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center'}}>
           {activeTools.map(tool => (
             <VisualizerBox key={tool.id} onRemove={() => setActiveTools(prev => prev.filter(t => t.id !== tool.id))}>
               <tool.Component data={vizData} />
             </VisualizerBox>
           ))}
-        </div>
+        </Div>
 
         {/* 도구 선택 팝업 */}
-        <div className={`bottom-sheet-overlay ${isToolMenuOpen ? 'active' : ''}`} onClick={() => setIsToolMenuOpen(false)} />
+        <Div className={`bottom-sheet-overlay ${isToolMenuOpen ? 'active' : ''}`} onClick={() => setIsToolMenuOpen(false)} />
 
         <Popup
           isOpen={isToolMenuOpen}
           onClose={() => setIsToolMenuOpen(false)}
           title="분석 도구 추가"
         >
-          <div className="tool-grid">
-            <button className="neumorphism-button" onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</button>
-            <button className="neumorphism-button" onClick={() => addTool(Lineup9RE)}>팀 기대 득점</button>
-            <button className="neumorphism-button" onClick={() => addTool(LineupRE24)}>팀 RE24</button>
-            <button className="neumorphism-button" onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</button>
-          </div>
+          <Div className="tool-grid">
+            <button onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</button>
+            <button onClick={() => addTool(Lineup9RE)}>팀 기대 득점</button>
+            <button onClick={() => addTool(LineupRE24)}>팀 RE24</button>
+            <button onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</button>
+          </Div>
         </Popup>
 
         {/* 선수 명단 바텀 시트 */}
@@ -156,14 +157,14 @@ function LineupPage() {
           onClose={() => setPlayerListOpen(false)}
           title="선수 명단"
         >
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <Div style={{ flex: 1, overflowY: 'auto' }}>
             {players.map(p => (
-              <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
+              <Div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
                 <span>{p.name}</span>
                 <button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p)}>편집</button>
-              </div>
+              </Div>
             ))}
-          </div>
+          </Div>
           <button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddPlayer}>선수 추가</button>
         </BottomSheet>
 
@@ -173,9 +174,9 @@ function LineupPage() {
           onClose={() => setLineupEditOpen(false)}
           title="타순 설정"
         >
-          <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
+          <Div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
             {lineup.map((playerId, idx) => (
-              <div key={idx} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Div key={idx} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ minWidth: '60px' }}>{idx + 1}번 타자</span>
                 <select
                   value={playerId}
@@ -188,9 +189,9 @@ function LineupPage() {
                 >
                   {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
-              </div>
+              </Div>
             ))}
-          </div>
+          </Div>
           <button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</button>
         </BottomSheet>
 
@@ -219,16 +220,18 @@ function LineupPage() {
             onDataChange={handleBatterDataChange}
           />
         </BottomSheet>
-      </div>
+      </Div>
 
-      <div className="slider">
-        <div className="container neumorphism" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button className="neumorphism-button" onClick={() => setPlayerListOpen(true)}>선수 명단</button>
-          <button className="neumorphism-button" onClick={() => setLineupEditOpen(true)}>타순 설정</button>
-          <button className="neumorphism-button" onClick={() => setRunnerOpen(true)}>주자 설정</button>
-          <button className="neumorphism-button" onClick={() => setIsToolMenuOpen(true)} style={{ marginLeft: 'auto' }}>도구 추가</button>
-        </div>
-      </div>
+      <FixedFooter>
+        <Box className="container">
+          <Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button onClick={() => setPlayerListOpen(true)}>선수 명단</button>
+            <button onClick={() => setLineupEditOpen(true)}>타순 설정</button>
+            <button onClick={() => setRunnerOpen(true)}>주자 설정</button>
+            <button onClick={() => setIsToolMenuOpen(true)} style={{ marginLeft: 'auto' }}>도구 추가</button>
+          </Div>
+        </Box>
+      </FixedFooter>
     </>
   )
 }

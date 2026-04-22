@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import Box from '../../../components/ui/Box';
+import Select from '../../../components/ui/Select';
 
 const RE24Visualizer = ({ data, isLineup = false }) => {
   const [batterIdx, setBatterIdx] = useState(0);
@@ -12,12 +14,12 @@ const RE24Visualizer = ({ data, isLineup = false }) => {
   const runnerStates = ["주자 없음", "1루", "2루", "3루", "1,2루", "1,3루", "2,3루", "만루"];
 
   return (
-    <div className="result-re24">
+    <>
       <h3 style={{ margin: '0 0 10px 0' }}>RE24</h3>
       
       {isLineup && (
-        <div style={{ marginBottom: '10px' }}>
-          <select 
+        <Box style={{ marginBottom: '10px' }}>
+          <Select 
             className="start-num neumorphism-input" 
             value={batterIdx} 
             onChange={(e) => setBatterIdx(parseInt(e.target.value))}
@@ -25,8 +27,8 @@ const RE24Visualizer = ({ data, isLineup = false }) => {
             {Array.from({ length: 9 }).map((_, i) => (
               <option key={i} value={i}>{i + 1}번 타자 시작</option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Box>
       )}
 
       <table className="re-table">
@@ -59,7 +61,7 @@ const RE24Visualizer = ({ data, isLineup = false }) => {
           })}
         </tbody>
       </table>
-    </div>
+    </>
   );
 };
 

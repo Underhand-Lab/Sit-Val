@@ -1,4 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
+import { Div, InputNumber } from './ui/UI.jsx';
 
 const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
   const [stats, setStats] = useState({
@@ -102,27 +103,27 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
         <div className="input-form">
           <div className="input-group">
             볼넷
-            <input type="number" name="bb" value={stats.bb} onChange={handleChange} />
+            <InputNumber name="bb" value={stats.bb} onChange={handleChange} />
           </div>
           <div className="input-group">
             사구(HBP)
-            <input type="number" name="hbp" value={stats.hbp || 0} onChange={handleChange} />
+            <InputNumber name="hbp" value={stats.hbp || 0} onChange={handleChange} />
           </div>
           <div className="input-group">
             1루타
-            <input type="number" name="1B" value={stats['1B']} onChange={handleChange} />
+            <InputNumber name="1B" value={stats['1B']} onChange={handleChange} />
           </div>
           <div className="input-group">
             2루타
-            <input type="number" name="2B" value={stats['2B']} onChange={handleChange} />
+            <InputNumber name="2B" value={stats['2B']} onChange={handleChange} />
           </div>
           <div className="input-group">
             3루타
-            <input type="number" name="3B" value={stats['3B']} onChange={handleChange} />
+            <InputNumber name="3B" value={stats['3B']} onChange={handleChange} />
           </div>
           <div className="input-group">
             홈런
-            <input type="number" name="hr" value={stats.hr} onChange={handleChange} />
+            <InputNumber name="hr" value={stats.hr} onChange={handleChange} />
           </div>
         </div>
       </div>
@@ -133,23 +134,23 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
         <div className="input-form">
           <div className="input-group">
             삼진 아웃
-            <input type="number" name="so" value={stats.so} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="so" value={stats.so} onChange={handleChange} className="neumorphism-input" />
           </div>
           <div className="input-group">
             땅볼 아웃
-            <input type="number" name="go" value={stats.go} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="go" value={stats.go} onChange={handleChange} className="neumorphism-input" />
           </div>
           <div className="input-group">
             뜬공 아웃
-            <input type="number" name="fo" value={stats.fo} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="fo" value={stats.fo} onChange={handleChange} className="neumorphism-input" />
           </div>
           <div className="input-group">
             희생플라이
-            <input type="number" name="sf" value={stats.sf || 0} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="sf" value={stats.sf || 0} onChange={handleChange} className="neumorphism-input" />
           </div>
           <div className="input-group">
             희생번트
-            <input type="number" name="sh" value={stats.sh || 0} onChange={handleChange} className="neumorphism-input" />
+            <InputNumber name="sh" value={stats.sh || 0} onChange={handleChange} className="neumorphism-input" />
           </div>
         </div>
       </div>

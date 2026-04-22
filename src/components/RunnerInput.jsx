@@ -1,4 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
+import { Div, InputNumber } from './ui/UI.jsx';
 
 /**
  * RunnerInput 컴포넌트
@@ -52,151 +53,151 @@ const RunnerInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
   const getRemainder = (safe, out) => (Math.max(0, 1 - safe - out)).toFixed(3);
 
   return (
-    <div id={id} className="runner-input-container" style={{ flex: 1, overflowY: 'auto' }}>
+    <Div id={id} className="runner-input-container" style={{ flex: 1, overflowY: 'auto' }}>
       {/* 폭투 */}
-      <div>
+      <Div>
         <h3>폭투</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             발생율
-            <input type="number" name="passedball" className="input_runner_passedball" 
+            <InputNumber name="passedball" className="input_runner_passedball" 
                    value={stats.passedball} onChange={handleChange} step="0.01" min="0" max="1" />
-          </div>
-        </div>
-      </div>
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 1루 주자 2루 도루 */}
-      <div>
+      <Div>
         <h3>1루 주자 2루 도루</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="s_r1_r2_safe" value={stats.s_r1_r2_safe} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="s_r1_r2_safe" value={stats.s_r1_r2_safe} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="s_r1_r2_out" value={stats.s_r1_r2_out} onChange={handleChange} step="0.01" />
-          </div>
-        </div>
-      </div>
+            <InputNumber name="s_r1_r2_out" value={stats.s_r1_r2_out} onChange={handleChange} step="0.01" />
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 2루 주자 3루 도루 */}
-      <div>
+      <Div>
         <h3>2루 주자 3루 도루</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="s_r2_r3_safe" value={stats.s_r2_r3_safe} onChange={handleChange} step="0.001" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="s_r2_r3_safe" value={stats.s_r2_r3_safe} onChange={handleChange} step="0.001" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="s_r2_r3_out" value={stats.s_r2_r3_out} onChange={handleChange} step="0.001" />
-          </div>
-        </div>
-      </div>
+            <InputNumber name="s_r2_r3_out" value={stats.s_r2_r3_out} onChange={handleChange} step="0.001" />
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 단타: 2루 주자 홈 득점 */}
-      <div>
+      <Div>
         <h3>단타: 2루 주자 홈 득점</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="1B_r2_home_safe" value={stats['1B_r2_home_safe']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="1B_r2_home_safe" value={stats['1B_r2_home_safe']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="1B_r2_home_out" value={stats['1B_r2_home_out']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="1B_r2_home_out" value={stats['1B_r2_home_out']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             시도 X: 
             <b>{getRemainder(stats['1B_r2_home_safe'], stats['1B_r2_home_out'])}</b>
-          </div>
-        </div>
-      </div>
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 단타: 1루 주자 3루 진루 */}
-      <div>
+      <Div>
         <h3>단타: 1루 주자 3루 진루</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="1B_r1_r3_safe" value={stats['1B_r1_r3_safe']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="1B_r1_r3_safe" value={stats['1B_r1_r3_safe']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="1B_r1_r3_out" value={stats['1B_r1_r3_out']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="1B_r1_r3_out" value={stats['1B_r1_r3_out']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             시도 X: 
             <b>{getRemainder(stats['1B_r1_r3_safe'], stats['1B_r1_r3_out'])}</b>
-          </div>
-        </div>
-      </div>
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 2루타: 1루 주자 홈 득점 */}
-      <div>
+      <Div>
         <h3>2루타: 1루 주자 홈 득점</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="2B_r1_home_safe" value={stats['2B_r1_home_safe']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="2B_r1_home_safe" value={stats['2B_r1_home_safe']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="2B_r1_home_out" value={stats['2B_r1_home_out']} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="2B_r1_home_out" value={stats['2B_r1_home_out']} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             시도 X: 
             <b>{getRemainder(stats['2B_r1_home_safe'], stats['2B_r1_home_out'])}</b>
-          </div>
-        </div>
-      </div>
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 희생플라이 */}
-      <div>
+      <Div>
         <h3>희생플라이</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             성공률
-            <input type="number" name="fo_r3_home_safe" value={stats.fo_r3_home_safe} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="fo_r3_home_safe" value={stats.fo_r3_home_safe} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             실패율
-            <input type="number" name="fo_r3_home_out" value={stats.fo_r3_home_out} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="fo_r3_home_out" value={stats.fo_r3_home_out} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             시도 X: 
             <b>{getRemainder(stats.fo_r3_home_safe, stats.fo_r3_home_out)}</b>
-          </div>
-        </div>
-      </div>
+          </Div>
+        </Div>
+      </Div>
       <hr />
 
       {/* 땅볼: 주자 1루 */}
-      <div>
+      <Div>
         <h3>땅볼: 주자 1루</h3>
-        <div className="input-form">
-          <div className="input-group">
+        <Div className="input-form">
+          <Div className="input-group">
             1루주자만 아웃 확률
-            <input type="number" name="go_r1_r2_out" value={stats.go_r1_r2_out} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="go_r1_r2_out" value={stats.go_r1_r2_out} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             타자주자만 아웃 확률
-            <input type="number" name="go_b_r1_out" value={stats.go_b_r1_out} onChange={handleChange} step="0.01" />
-          </div>
-          <div className="input-group">
+            <InputNumber name="go_b_r1_out" value={stats.go_b_r1_out} onChange={handleChange} step="0.01" />
+          </Div>
+          <Div className="input-group">
             병살 확률: 
             <b>{getRemainder(stats.go_r1_r2_out, stats.go_b_r1_out)}</b>
-          </div>
-        </div>
-      </div>
-    </div>
+          </Div>
+        </Div>
+      </Div>
+    </Div>
   );
 });
 

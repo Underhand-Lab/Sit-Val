@@ -145,11 +145,10 @@ th {
 }
 
 .container {
-    max-width: 750px;
+    width: 100%;
     text-align: center;
     position: relative;
     padding: 10px 15px;
-    margin: 20px auto;
 }
 
 .float-left {
@@ -168,6 +167,8 @@ th {
 
 main {
     min-height: 100vh;
+    max-width: 750px;
+    margin: auto;
     display: flex;
     flex-direction: column;
 }

@@ -14,6 +14,9 @@ import BatterInput from '../components/BatterInput';
 import RunnerInput from '../components/RunnerInput';
 import Popup from '../components/Popup'; // Import the new Popup component
 import BottomSheet from '../components/BottomSheet';
+import { Box, Div, H3, Button, FixedFooter } from '../components/ui/UI.jsx';
+import { magneticFluxQuantumDependencies } from 'mathjs';
+
 
 function LeaguePage() {
   const batterRef = useRef(null)
@@ -127,15 +130,15 @@ function LeaguePage() {
 
   return (
     <>
-      <div id="wrapper">
+      <Div id="wrapper">
 
-        <div id="boxes">
+        <Div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
           {activeTools.map(tool => (
             <VisualizerBox key={tool.id} onRemove={() => setActiveTools(prev => prev.filter(t => t.id !== tool.id))}>
               <tool.Component data={vizData} />
             </VisualizerBox>
           ))}
-        </div>
+        </Div>
 
         {/* 리그 타격 기록 설정 바텀 시트 */}
         <BottomSheet
@@ -171,36 +174,36 @@ function LeaguePage() {
           onClose={() => setIsToolMenuOpen(false)}
           title="분석 도구 추가"
         >
-          <div className="tool-grid"> {/* Add tool-grid class for styling */}
-            <button onClick={() => addTool(Visualizer9RE)}>9RE (기대 득점)</button>
-            <button onClick={() => addTool(RE24Visualizer)}>RE24 상황판</button>
-            <button onClick={() => addTool(LeagueVisualizer)}>리그 확장 지표</button>
-            <button onClick={() => addTool(RunValueVisualizer)}>타구 가치 분석</button>
-            <button onClick={() => addTool(PersonalVisualizer)}>리그 개인 가치</button>
-            <button onClick={() => addTool(LeagueBigInningVisualizer)}>빅이닝 확률</button>
-          </div>
+          <Div className="tool-grid"> {/* Add tool-grid class for styling */}
+            <Button onClick={() => addTool(Visualizer9RE)}>9RE (기대 득점)</Button>
+            <Button onClick={() => addTool(RE24Visualizer)}>RE24 상황판</Button>
+            <Button onClick={() => addTool(LeagueVisualizer)}>리그 확장 지표</Button>
+            <Button onClick={() => addTool(RunValueVisualizer)}>타구 가치 분석</Button>
+            <Button onClick={() => addTool(PersonalVisualizer)}>리그 개인 가치</Button>
+            <Button onClick={() => addTool(LeagueBigInningVisualizer)}>빅이닝 확률</Button>
+          </Div>
         </Popup>
-      </div>
+      </Div>
 
-      <div className="slider">
-        <div className="container neumorphism">
-          <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center', overflow: 'auto' }}>
-            <div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'left', flexGrow: 1, gap: '10px' }}>
-              <button onClick={() => setIsBatterOpen(true)} style={{ textWrap: 'nowrap' }}>
+      <FixedFooter>
+        <Box className="container">
+          <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center', overflow: 'auto' }}>
+            <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'left', flexGrow: 1, gap: '10px' }}>
+              <Button onClick={() => setIsBatterOpen(true)} style={{ textWrap: 'nowrap' }}>
                 리그 타격 기록 설정
-              </button>
-              <button onClick={() => setIsRunnerOpen(true)} style={{ textWrap: 'nowrap' }}>
+              </Button>
+              <Button onClick={() => setIsRunnerOpen(true)} style={{ textWrap: 'nowrap' }}>
                 리그 주자 능력 설정
-              </button>
-            </div>
-            <div>
-              <button onClick={() => setIsToolMenuOpen(true)} style={{ textWrap: 'nowrap' }}>
+              </Button>
+            </Div>
+            <Div>
+              <Button onClick={() => setIsToolMenuOpen(true)} style={{ textWrap: 'nowrap' }}>
                 분석 도구
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+              </Button>
+            </Div>
+          </Div>
+        </Box>
+      </FixedFooter>
     </>
   )
 }

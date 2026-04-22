@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import BatterInput from '../../../components/BatterInput';
 import BottomSheet from '../../../components/BottomSheet';
+import { Box, Div, H3 } from '../../../components/ui/UI.jsx';
+
 
 const PersonalVisualizer = ({ data }) => {
   if (!data || !data[0] || !data[1]) return null;
@@ -76,63 +78,64 @@ const PersonalVisualizer = ({ data }) => {
   const wrcPlusCustom = calculateWrcPlus(wraaCustom, customRunPerPa);
 
   return (
-    <div className="result-personal">
-      <h3 style={{ margin: '0 0 10px 0' }}>개인 타격 가치</h3>
+    <Div className="result-personal">
+      <H3 style={{ margin: '0 0 10px 0' }}>개인 타격 가치</H3>
 
-      <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+      <Div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
         {/* 메인 지표: wOBA 및 wRC+ */}
-        <div className="neumorphism" style={{padding: '10px'}}>
-          <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
-            <div style={{ flex: 1 }}>
+        <Box>
+          <Div style={{ padding: '10px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
+            <Div style={{ flex: 1 }}>
               <span style={{ fontSize: '0.85em', color: '#666', display: 'block', marginBottom: '5px' }}>가중 출루율 (wOBA)</span>
-              <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#e74c3c' }}>
+              <Div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#e74c3c' }}>
                 {personalWobaScaled.toFixed(3)}
-              </div>
-            </div>
-            <div style={{ height: '40px', width: '1px', background: '#ddd' }}></div>
-            <div style={{ flex: 1 }}>
+              </Div>
+            </Div>
+            <Div style={{ height: '40px', width: '1px', background: '#ddd' }}></Div>
+            <Div style={{ flex: 1 }}>
               <span style={{ fontSize: '0.85em', color: '#666', display: 'block', marginBottom: '5px' }}>득점 창출력 (wRC+)</span>
-              <div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#2c3e50' }}>
+              <Div style={{ fontSize: '1.6em', fontWeight: 'bold', color: '#2c3e50' }}>
                 {Math.round(wrcPlus)}
-              </div>
-            </div>
-          </div>
-        </div>
+              </Div>
+            </Div>
+          </Div>
+
+        </Box>
 
         {/* 상세 분석 지표: wRAA 및 커스텀 지표 */}
-        <div className="neumorphism">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-            <div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee' }}>
+        <Box>
+          <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+            <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em', color: '#888' }}>wRAA (표준)</span>
-              <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraa >= 0 ? '#e74c3c' : '#3498db' }}>
+              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraa >= 0 ? '#e74c3c' : '#3498db' }}>
                 {wraa > 0 ? '+' : ''}{wraa.toFixed(2)}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '10px' }}>
+              </Div>
+            </Div>
+            <Div style={{ textAlign: 'center', padding: '10px' }}>
               <span style={{ fontSize: '0.8em', color: '#888' }}>wRAA (커스텀)</span>
-              <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraaCustom >= 0 ? '#e74c3c' : '#3498db' }}>
+              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraaCustom >= 0 ? '#e74c3c' : '#3498db' }}>
                 {wraaCustom > 0 ? '+' : ''}{wraaCustom.toFixed(2)}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee', borderTop: '1px solid #eee' }}>
+              </Div>
+            </Div>
+            <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee', borderTop: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em', color: '#888' }}>wRC+ (커스텀)</span>
-              <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#2c3e50' }}>
+              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#2c3e50' }}>
                 {Math.round(wrcPlusCustom)}
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', padding: '10px', borderTop: '1px solid #eee' }}>
+              </Div>
+            </Div>
+            <Div style={{ textAlign: 'center', padding: '10px', borderTop: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em', color: '#888' }}>타석당 득점 가치</span>
-              <div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#2c3e50' }}>
+              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: '#2c3e50' }}>
                 {(wraaCustom / (batterStats.pa || 1)).toFixed(3)}
-              </div>
-            </div>
-          </div>
-        </div>
+              </Div>
+            </Div>
+          </Div>
+        </Box>
         <p style={{ fontSize: '0.75em', color: '#999', marginTop: '15px', textAlign: 'center', lineHeight: '1.4' }}>
           ※ 커스텀 지표는 모델이 계산한 상황별 득점 가치 변화(runValue)를 직접 반영하며,<br />
           wRC+는 리그 평균 득점 환경(R/PA: {runPerPa.toFixed(3)}) 대비 생산성을 나타냅니다.
         </p>
-      </div>
+      </Div>
 
       <button
         className="neumorphism-button"
@@ -154,7 +157,7 @@ const PersonalVisualizer = ({ data }) => {
           id="personal-batter-analysis-input"
         />
       </BottomSheet>
-    </div>
+    </Div>
   );
 };
 

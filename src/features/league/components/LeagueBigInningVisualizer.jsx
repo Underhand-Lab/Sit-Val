@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Box, Input, H3 } from "../../../components/ui/UI.jsx"
 
 function getBigInningProb(mu, variance, k = 1) {
     if (k <= 0) return 1.0; 
@@ -44,9 +45,9 @@ const LeagueBigInningVisualizer = ({ data }) => {
   const runnerStates = ["주자 없음", "1루", "2루", "3루", "1,2루", "1,3루", "2,3루", "만루"];
 
   return (
-    <div className="result-big-inning">
-      <h3 style={{ margin: '0 0 10px 0' }}>
-        <input 
+    <Div>
+      <H3 style={{ margin: '0 0 10px 0' }}>
+        <Input 
           type="number" 
           className="neumorphism-input" 
           value={goalRun} 
@@ -54,7 +55,8 @@ const LeagueBigInningVisualizer = ({ data }) => {
           onChange={(e) => setGoalRun(Math.max(1, parseInt(e.target.value) || 1))}
           style={{ width: '60px' }}
         />
-        <span>점 이상 확률</span></h3>
+        <span>점 이상 확률</span>
+      </H3>
 
       <table className="re-table">
         <thead>
@@ -83,7 +85,7 @@ const LeagueBigInningVisualizer = ({ data }) => {
           })}
         </tbody>
       </table>
-    </div>
+    </Div>
   );
 };
 
