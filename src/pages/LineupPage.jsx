@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { calculateLineupRE } from '../features/lineup/api/re-line-up.js'
 
-import VisualizerBox from '../components/VisualizerBox'
+import VisualizerBox from '../common/components/VisualizerBox.jsx'
 import LeadoffVisualizer from '../features/league/components/LeadoffVisualizer'
 import Lineup9RE from '../features/lineup/components/Lineup9RE'
 import LineupRE24 from '../features/lineup/components/LineupRE24'
 import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
-import BatterInput from '../components/BatterInput'
-import RunnerInput from '../components/RunnerInput'
-import BottomSheet from '../components/BottomSheet'
-import Popup from '../components/Popup'; // Popup 컴포넌트 임포트
-import { Box, Div, H3, Button, FixedFooter } from '../components/ui/UI.jsx';
+import BatterInput from '../common/components/BatterInput.jsx'
+import RunnerInput from '../common/components/RunnerInput.jsx'
+import BottomSheet from '../common/components/BottomSheet.jsx'
+import Popup from '../common/components/Popup.jsx'; // Popup 컴포넌트 임포트
+import { Box, Div, H3, Button, FixedFooter } from '../common/components/ui/UI.jsx';
 
 function LineupPage() {
   const batterRef = useRef(null)

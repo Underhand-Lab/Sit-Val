@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navigation from './components/Navigation';
+import Navigation from './common/components/Navigation';
 import LeaguePage from './pages/LeaguePage';
 import LineupPage from './pages/LineupPage';
 import HomePage from './pages/HomePage';

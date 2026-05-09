@@ -1,8 +1,8 @@
 import { createFundamentalMatrix, getExpectedRewards, getVariance }
-    from "../../../lib/markov/markov-mrp.js";
+    from "../../../common/lib/markov/markov-mrp.js";
 
-import { matrixBuilder } from "../../../lib/sit-val/matrix-builder.js";
-import * as TransitionEngine from "../../../lib/sit-val/transition-engine/index.js";
+import { matrixBuilder } from "../../../common/lib/sit-val/matrix-builder.js";
+import * as TransitionEngine from "../../../common/lib/sit-val/transition-engine/index.js";
 
 
 const stateManager = {

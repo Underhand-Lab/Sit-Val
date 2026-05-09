@@ -1,10 +1,9 @@
 import React from 'react'
-import '../lib/easy-h/module/import-markdown.js'
-import { Div, Box } from '../components/ui/UI.jsx'
+import { Div, Box } from '../common/components/ui/UI.jsx'
 
 function HomePage() {
   return (
-    <Div id="wrapper" style={{ paddingBottom: '10px' }}>
+    <Div id="wrapper" style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
       <Box className="container">
         <h1>🚩 소개</h1>
         <hr/>

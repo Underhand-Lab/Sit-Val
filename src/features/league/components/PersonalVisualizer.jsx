@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import BatterInput from '../../../components/BatterInput';
-import BottomSheet from '../../../components/BottomSheet';
-import { Box, Div, H3, Button } from '../../../components/ui/UI.jsx';
+import BatterInput from '../../../common/components/BatterInput.jsx';
+import BottomSheet from '../../../common/components/BottomSheet.jsx';
+import { Box, Div, H3, Button } from '../../../common/components/ui/UI.jsx';
 
 
 const PersonalVisualizer = ({ data }) => {

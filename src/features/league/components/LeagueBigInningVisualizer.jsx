@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Input, H3 } from "../../../components/ui/UI.jsx"
+import { Box, Input, H3 } from "../../../common/components/ui/UI.jsx"
 
 function getBigInningProb(mu, variance, k = 1) {
     if (k <= 0) return 1.0; 

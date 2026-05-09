@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import Box from '../../../components/ui/Box';
-import Select from '../../../components/ui/Select';
+import Box from '../../../common/components/ui/Box';
+import Select from '../../../common/components/ui/Select';
 
 const RE24Visualizer = ({ data, isLineup = false }) => {
   const [batterIdx, setBatterIdx] = useState(0);

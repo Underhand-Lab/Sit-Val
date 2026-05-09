@@ -1,61 +1,48 @@
 import React, { useState, useEffect, useRef } from 'react'
-import * as TransitionEngine from '../lib/sit-val/transition-engine/index.js'
-import * as Calc from "@/lib/sabermetrics/calc.js";
+import * as TransitionEngine from '../common/lib/sit-val/transition-engine/index.js'
+import * as Calc from "../common/lib/sabermetrics/calc.js";
 import { calculateRE } from '../features/league/api/re-league.js';
 
-import VisualizerBox from '../components/VisualizerBox';
+import VisualizerBox from '../common/components/VisualizerBox.jsx';
 import Visualizer9RE from '../features/league/components/Visualizer9RE';
 import RE24Visualizer from '../features/league/components/RE24Visualizer';
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
 import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 import LeagueBigInningVisualizer from '../features/league/components/LeagueBigInningVisualizer';
 import PersonalVisualizer from '../features/league/components/PersonalVisualizer.jsx'
-import BatterInput from '../components/BatterInput';
-import RunnerInput from '../components/RunnerInput';
-import Popup from '../components/Popup'; // Import the new Popup component
-import BottomSheet from '../components/BottomSheet';
-import { Box, Div, H3, Button, FixedFooter } from '../components/ui/UI.jsx';
-import { magneticFluxQuantumDependencies } from 'mathjs';
+import BatterInput from '../common/components/BatterInput.jsx';
+import RunnerInput from '../common/components/RunnerInput.jsx';
+import Popup from '../common/components/Popup.jsx'; // Import the new Popup component
+import BottomSheet from '../common/components/BottomSheet.jsx';
+import { Box, Div, H3, Button, FixedFooter } from '../common/components/ui/UI.jsx';
 
+// 초기 상태를 상수로 분리하는 것이 좋습니다.
+const INITIAL_BATTER_STATS = {
+  '1B': 65, '2B': 23, '3B': 0, hr: 56,
+  bb: 111, so: 89, go: 117, fo: 135,
+  sf: 6, sh: 0, hbp: 0
+};
+
+const INITIAL_RUNNER_STATS = {
+  passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03,
+  s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40,
+  '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30,
+  '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7,
+  '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85,
+  fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3
+};
 
 function LeaguePage() {
   const batterRef = useRef(null)
   const runnerRef = useRef(null)
   const transitionEngine = new TransitionEngine.Standard()
 
-  // 바텀 시트 열림 상태 관리
   const [isBatterOpen, setIsBatterOpen] = useState(false);
   const [isRunnerOpen, setIsRunnerOpen] = useState(false);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-  // 리그 기본 타자 능력치 (초기값)
-  const [leagueBatterStats, setLeagueBatterStats] = useState({
-    '1B': 65, '2B': 23, '3B': 0, hr: 56,
-    bb: 111, so: 89, go: 117, fo: 135,
-    sf: 6, sh: 0, hbp: 0
-  });
-
-  // 리그 기본 주자 능력치 (초기값)
-  const [leagueRunnerStats, setLeagueRunnerStats] = useState({
-    passedball: 0.03,
-    s_r1_r2_safe: 0.10,
-    s_r1_r2_out: 0.03,
-    s_r2_r3_safe: 0.004,
-    s_r2_r3_out: 0.001,
-    '1B_r2_home_safe': 0.40,
-    '1B_r2_home_out': 0.05,
-    '1B_r2_r3_safe': 0.55,
-    '1B_r1_r3_safe': 0.30,
-    '1B_r1_r3_out': 0.05,
-    '1B_r1_r2_safe': 0.65,
-    '2B_r1_home_safe': 0.7,
-    '2B_r1_home_out': 0.05,
-    '2B_r1_r3_safe': 0.25,
-    fo_r3_home_safe: 0.85,
-    fo_r3_home_out: 0.05,
-    fo_r3_r3_safe: 0.10,
-    go_r1_r2_out: 0.3, go_b_r1_out: 0.3
-  });
+  const [leagueBatterStats, setLeagueBatterStats] = useState(INITIAL_BATTER_STATS);
+  const [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
 
   // 상태 관리: 시각화 도구 리스트와 계산 결과 데이터
   const [activeTools, setActiveTools] = useState([
