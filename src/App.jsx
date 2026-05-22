@@ -1,14 +1,15 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import Navigation from './common/components/Navigation';
-import LeaguePage from './pages/LeaguePage';
-import LineupPage from './pages/LineupPage';
-import HomePage from './pages/HomePage';
+import Navigation from '@apps/common/components/Navigation';
+import LeaguePage from '@apps/pages/LeaguePage';
+import LineupPage from '@apps/pages/LineupPage';
+import HomePage from '@apps/pages/HomePage';
+import { vars } from '@shared/bridges/UIBridge';
 
 function App() {
   return (
     <Router basename="/sit-val">
-      <div className="app-shell" style={{ minHeight: '100vh', width: '100%', background: '#f8f9fa' }}>
+      <div className="app-shell" style={{ minHeight: '100vh', width: '100%', background: vars.background}}>
         {/* 공통 네비게이션: App.jsx에서 일괄 관리 */}
         <Navigation />
         
