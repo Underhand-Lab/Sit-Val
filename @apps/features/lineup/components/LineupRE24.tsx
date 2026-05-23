@@ -1,7 +1,12 @@
 import { Div, Select, vars } from '@shared/bridges/UIBridge';
 import React, { useState } from 'react';
+import { LineupCalculationResult } from '../api/re-line-up';
 
-const LineupRE24 = ({ data }) => {
+interface LineupRE24Props {
+  data: [LineupCalculationResult] | null;
+}
+
+const LineupRE24: React.FC<LineupRE24Props> = ({ data }) => {
   const [batterIdx, setBatterIdx] = useState(0);
 
   if (!data || !data[0] || !data[0].R) return null;
@@ -17,8 +22,8 @@ const LineupRE24 = ({ data }) => {
         flexDirection: 'row', alignItems: 'center',
         justifyContent: 'center', gap: '10px',
       }}><Select
-          value={batterIdx}
-          onChange={(e) => setBatterIdx(parseInt(e.target.value))}
+          value={batterIdx.toString()}
+          onChange={(e: any) => setBatterIdx(parseInt(e.target.value))}
           options={Array.from({ length: 9 }).map((_, i) => ({
             value: i,
             label: `${i + 1}번 타자`,
@@ -39,9 +44,9 @@ const LineupRE24 = ({ data }) => {
         </thead>
         <tbody>
           {Array.from({ length: 8 }).map((_, j) => {
-            const getVal = (offset) => {
+            const getVal = (offset: number) => {
               const val = R[j + offset];
-              return (Array.isArray(val) ? val[0] : val).toFixed(3);
+              return (Array.isArray(val) ? (val as any)[0] : val).toFixed(3);
             };
 
             return (

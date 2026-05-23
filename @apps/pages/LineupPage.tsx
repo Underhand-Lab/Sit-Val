@@ -3,29 +3,36 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Popup from '@shared/components/Modal'; // Popup 컴포넌트 임포트
 import { Box, Div, H3, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
 
-import VisualizerBox from '@sit-val/components/VisualizerBox.jsx'
-import BatterInput from '@sit-val/components/BatterInput.jsx'
-import RunnerInput from '@sit-val/components/RunnerInput.jsx'
+import VisualizerBox from '@sit-val/components/VisualizerBox'
+import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput'
+import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput'
 
-import { calculateLineupRE } from '../../@apps/features/lineup/api/re-line-up.js'
-import LeadoffVisualizer from '../../@apps/features/league/components/LeadoffVisualizer.jsx'
-import Lineup9RE from '../../@apps/features/lineup/components/Lineup9RE.jsx'
-import LineupRE24 from '../../@apps/features/lineup/components/LineupRE24.jsx'
-import LineupBigInningVisualizer from '../../@apps/features/lineup/components/LineupBigInningVisualizer.jsx'
+import { calculateLineupRE, LineupCalculationResult } from '../features/lineup/api/re-line-up'
+import { BatterStatsData } from '@sit-val/types/BatterStats'
+import { RunnerStats } from '@sit-val/types/RunnerStats'
+import LeadoffVisualizer from '../features/league/components/LeadoffVisualizer'
+import Lineup9RE from '../features/lineup/components/Lineup9RE'
+import LineupRE24 from '../features/lineup/components/LineupRE24'
+import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
 
-function LineupPage() {
-  const batterRef = useRef(null)
-  const runnerRef = useRef(null)
+interface Player extends BatterStatsData {
+  id: number;
+  name: string;
+}
+
+const LineupPage: React.FC = () => {
+  const batterRef = useRef<BatterInputHandle>(null)
+  const runnerRef = useRef<RunnerInputHandle>(null)
 
   // 상태 관리
-  const [activeTools, setActiveTools] = useState([
-    { id: 1, Component: (props) => <Lineup9RE {...props} /> },
-    { id: 2, Component: (props) => <LineupRE24 {...props} /> },
+  const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
+    { id: 1, Component: (props: any) => <Lineup9RE {...props} /> },
+    { id: 2, Component: (props: any) => <LineupRE24 {...props} /> },
   ])
-  const [vizData, setVizData] = useState(null)
+  const [vizData, setVizData] = useState<[LineupCalculationResult] | null>(null)
 
   // 선수 및 타순 상태
-  const [players, setPlayers] = useState([
+  const [players, setPlayers] = useState<Player[]>([
     {
       id: 1, name: '이승엽',
       '1B': 65, '2B': 23, '3B': 0, hr: 56,
@@ -67,10 +74,10 @@ function LineupPage() {
   const [isRunnerOpen, setRunnerOpen] = useState(false);
   const [isBatterEditOpen, setBatterEditOpen] = useState(false);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
-  const [editingPlayerId, setEditingPlayerId] = useState(null);
-  const [editingPlayerStats, setEditingPlayerStats] = useState(null); // New state for player stats being edited
+  const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
+  const [editingPlayerStats, setEditingPlayerStats] = useState<Player | null>(null);
 
-  const addTool = (Component, extraProps = {}) => {
+  const addTool = (Component: React.FC<any>, extraProps = {}) => {
     setActiveTools(prev => [
       ...prev,
       { id: Date.now(), Component: (props) => <Component {...props} {...extraProps} /> }
@@ -80,9 +87,9 @@ function LineupPage() {
 
   const execute = useCallback(() => {
     const lineupAbilities = lineup.map(id => {
-      const p = players.find(player => player.id === id);
+      const p = players.find(player => player.id === id)!;
       // 하드코딩된 p.pa 대신 입력된 스탯 기반으로 정확한 PA 계산 (FO에 SF 포함 가정)
-      const hits = p['1B'] + p['2B'] + p['3B'] + p.hr;
+      const hits = (p['1B'] || 0) + (p['2B'] || 0) + (p['3B'] || 0) + (p.hr || 0);
       const pa = Math.max(1, hits + p.bb + (p.hbp || 0) + p.so + p.go + p.fo + (p.sh || 0));
       return {
         '1B': p['1B'] / pa, '2B': p['2B'] / pa, '3B': p['3B'] / pa,
@@ -107,21 +114,21 @@ function LineupPage() {
   };
 
   // 선수 편집 시작
-  const startEditPlayer = (player) => {
+  const startEditPlayer = (player: Player) => {
     setEditingPlayerId(player.id);
     setEditingPlayerStats(player); // Set the stats for the player being edited
     setBatterEditOpen(true);
   };
 
   // 타자 데이터 변경 저장
-  const handleBatterDataChange = (updatedStats) => { // BatterInput에서 직접 updatedStats를 받음
+  const handleBatterDataChange = (updatedStats: BatterStatsData) => { // BatterInput에서 직접 updatedStats를 받음
     if (!editingPlayerId) return;
     // updatedStats는 이미 BatterInput에서 넘어온 최신 raw stats
     setPlayers(prev => prev.map(p => p.id === editingPlayerId ? { ...updatedStats, id: p.id, name: p.name } : p));
   };
 
   // 주자 데이터 변경 저장
-  const handleRunnerDataChange = (updatedStats) => {
+  const handleRunnerDataChange = (updatedStats: RunnerStats) => {
     setLineupRunnerStats(updatedStats);
   };
 
@@ -217,7 +224,7 @@ function LineupPage() {
         >
           <BatterInput
             ref={batterRef}
-            initialStats={editingPlayerStats} // Pass the stats to BatterInput
+            initialStats={editingPlayerStats || undefined} // Pass the stats to BatterInput
             onDataChange={handleBatterDataChange}
           />
         </BottomSheet>

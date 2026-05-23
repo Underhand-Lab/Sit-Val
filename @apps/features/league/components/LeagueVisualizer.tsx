@@ -1,9 +1,17 @@
 import { vars } from '@shared/bridges/UIBridge';
 import React from 'react';
+import { RECalculationResult } from '../api/re-league';
+import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
 
-const LeagueVisualizer = ({ data }) => {
+interface LeagueVisualizerProps {
+  data: [RECalculationResult, WOBAWeights, number, number, number] | null;
+}
+
+const LeagueVisualizer: React.FC<LeagueVisualizerProps> = ({ data }) => {
   if (!data) return null;
-  const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
+  const [ret, , , wOBAScale, runPerPa] = data;
+
+  const customRunPerPa = ret['R_PA_Custom'];
 
   return (
     <div className="result-league">
@@ -12,8 +20,8 @@ const LeagueVisualizer = ({ data }) => {
         <p className="league-woba-scale">wOBA Scale: {wOBAScale.toFixed(3)}</p>
         <p className="league-p-pa">R/PA: {runPerPa.toFixed(3)}</p>
         <p className="league-p-pa-custom">
-          R/PA(Custom): {ret['R_PA_Custom'] ? 
-            (Array.isArray(ret['R_PA_Custom']) ? ret['R_PA_Custom'][0] : ret['R_PA_Custom']).toFixed(3) 
+          R/PA(Custom): {customRunPerPa !== undefined ? 
+            (Array.isArray(customRunPerPa) ? customRunPerPa[0] : customRunPerPa).toFixed(3) 
             : '0.000'}
         </p>
       </div>

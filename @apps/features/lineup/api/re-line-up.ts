@@ -1,18 +1,17 @@
 import { createFundamentalMatrix, getExpectedRewards, getVariance }
-    from "@sit-val/lib/markov/markov-mrp.js";
+    from "@sit-val/lib/markov/markov-mrp";
+import { matrixBuilder, StateManager } from "@sit-val/lib/matrix-builder";
+import * as TransitionEngine from "@sit-val/lib/transition-engine";
+import { RunnerStats } from "@sit-val/types/RunnerStats";
 
-import { matrixBuilder } from "@sit-val/lib/matrix-builder.js";
-import * as TransitionEngine from "@sit-val/lib/transition-engine/index.js";
-
-
-const stateManager = {
-    getIndex(b_idx, out, b3, b2, b1) {
+const stateManager: StateManager = {
+    getIndex(b_idx: number, out: number, b3: number, b2: number, b1: number): number {
         if (out >= 3) return 216; // 흡수 상태 (이닝 종료)
         // 타자 수에 따라 24 또는 216 상태로 자동 매핑
         return (b_idx * 24) + (out * 8) + (b3 * 4) + (b2 * 2) + b1;
     },
 
-    reverseState(idx) {
+    reverseState(idx: number): [number, number, number, number, number] {
         const b_idx = Math.floor(idx / 24);
         const rem = idx % 24;
         const out = Math.floor(rem / 8);
@@ -23,16 +22,30 @@ const stateManager = {
         return [b_idx, out, b3, b2, b1];
     },
 
-    nextB(b) {
+    nextB(b: number): number {
         return (b + 1) % 9;
     },
 
-    size() {
+    size(): number {
         return 216;
     }
 };
 
-export function calculateLineupRE(lineup_abilities, runner_ability) {
+export interface LineupCalculationResult {
+    R: number[][];
+    variance: number[][];
+    pa_vector: number[];
+    leadoff_vector: number[];
+    total_re: number;
+}
+
+/**
+ * 9인 라인업의 기대 득점(RE) 및 관련 통계 지표를 계산합니다.
+ */
+export function calculateLineupRE(
+    lineup_abilities: Record<string, number>[], 
+    runner_ability: RunnerStats
+): LineupCalculationResult {
     const transitionEngine = new TransitionEngine.Standard();
     const { P, R, R_sq } = matrixBuilder(
         lineup_abilities,
@@ -46,24 +59,29 @@ export function calculateLineupRE(lineup_abilities, runner_ability) {
     const END_STATE = N_SIZE;
 
     const N_mat = createFundamentalMatrix(P, N_SIZE);
-    const RE = getExpectedRewards(N_mat, R);
-    const variance = getVariance(P, N_mat, R, R_sq, RE, 216);
+    
+    // matrixBuilder에서 생성된 R, R_sq는 [N][1] 형태이므로 1차원 배열로 변환하여 MRP 엔진에 전달
+    const R_flat = R.map(r => r[0]);
+    const R_sq_flat = R_sq.map(r => r[0]);
 
-    const N = N_mat.toArray();
+    const RE = getExpectedRewards(N_mat, R_flat);
+    const variance = getVariance(P, N_mat, R_flat, R_sq_flat, RE, N_SIZE);
+
+    const N = N_mat.toArray() as number[][];
 
     /* ================================
      * [0] 상태 캐싱
      * ================================ */
-    const batterIndexOfState = new Array(N_SIZE);
+    const batterIndexOfState = new Array<number>(N_SIZE);
     for (let i = 0; i < N_SIZE; i++) {
         batterIndexOfState[i] = stateManager.reverseState(i)[0];
     }
 
     /* ================================
-     * [A] 타자별 24상황 RE
+     * [A] 타자별 24상황 RE (시각화용)
      * ================================ */
-    const situational_re = Array.from({ length: L }, () => []);
-    const situational_variance = Array.from({ length: L }, () => []);
+    const situational_re: number[][] = Array.from({ length: L }, () => []);
+    const situational_variance: number[][] = Array.from({ length: L }, () => []);
 
     for (let b = 0; b < L; b++) {
         for (let out = 0; out < 3; out++) {
@@ -71,8 +89,8 @@ export function calculateLineupRE(lineup_abilities, runner_ability) {
                 for (let b2 = 0; b2 < 2; b2++) {
                     for (let b1 = 0; b1 < 2; b1++) {
                         const idx = stateManager.getIndex(b, out, b3, b2, b1);
-                        situational_re[b].push(RE[idx][0]);
-                        situational_variance[b].push(variance[idx][0]);
+                        situational_re[b].push(RE[idx]);
+                        situational_variance[b].push(variance[idx]);
                     }
                 }
             }
@@ -82,7 +100,7 @@ export function calculateLineupRE(lineup_abilities, runner_ability) {
     /* ================================
      * [B] 이닝 전이 행렬 T
      * ================================ */
-    const T = Array.from({ length: L }, () => Array(L).fill(0));
+    const T: number[][] = Array.from({ length: L }, () => Array(L).fill(0));
 
     for (let b = 0; b < L; b++) {
         const startNode = stateManager.getIndex(b, 0, 0, 0, 0);
@@ -101,16 +119,16 @@ export function calculateLineupRE(lineup_abilities, runner_ability) {
     /* ================================
      * [C] 9이닝 시뮬레이션
      * ================================ */
-    let currentStartDist = new Array(L).fill(0);
+    let currentStartDist: number[] = new Array(L).fill(0);
     currentStartDist[0] = 1.0;
 
-    const leadoff_vector = new Array(L).fill(0);
-    const pa_vector = new Array(L).fill(0);
+    const leadoff_vector: number[] = new Array(L).fill(0);
+    const pa_vector: number[] = new Array(L).fill(0);
 
     let totalRE = 0;
 
     for (let inning = 1; inning <= 9; inning++) {
-        const nextStartDist = new Array(L).fill(0);
+        const nextStartDist: number[] = new Array(L).fill(0);
 
         for (let b = 0; b < L; b++) {
             const pStart = currentStartDist[b];
@@ -119,7 +137,7 @@ export function calculateLineupRE(lineup_abilities, runner_ability) {
             leadoff_vector[b] += pStart;
 
             const startNode = stateManager.getIndex(b, 0, 0, 0, 0);
-            totalRE += pStart * RE[startNode][0];
+            totalRE += pStart * RE[startNode];
 
             const N_row = N[startNode];
             for (let j = 0; j < N_SIZE; j++) {

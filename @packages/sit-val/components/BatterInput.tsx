@@ -1,8 +1,31 @@
-import React, { useState, useImperativeHandle, forwardRef, useEffect } from 'react';
-import { Div, InputNumber } from '@shared/bridges/UIBridge';
+import { useState, useImperativeHandle, forwardRef, useEffect, ChangeEvent } from 'react';
+import { InputNumber } from '@shared/bridges/UIBridge';
 
-const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
-  const [stats, setStats] = useState({
+import { BatterStats, BatterStatsData } from '../types/BatterStats';
+
+export interface BatterInputHandle {
+  setData: (newData: BatterStatsData) => void;
+  getAbilityRaw: () => BatterStatsData;
+  getAbility: () => {
+    '1B': number;
+    '2B': number;
+    '3B': number;
+    hr: number;
+    bb: number;
+    so: number;
+    go: number;
+    fo: number;
+  };
+}
+
+interface BatterInputProps {
+  onDataChange?: (stats: BatterStatsData) => void;
+  id?: string;
+  initialStats?: BatterStatsData;
+}
+
+const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataChange, id, initialStats }, ref) => {
+  const [stats, setStats] = useState<BatterStats>(new BatterStats({
     bb: 111,
     '1B': 65,
     '2B': 23,
@@ -14,12 +37,12 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
     sf: 0,
     sh: 0,
     hbp: 0,
-  });
+  }));
 
   // initialStats prop이 변경될 때마다 내부 stats 상태를 업데이트
   useEffect(() => {
     if (initialStats) {
-      setStats(initialStats);
+      setStats(new BatterStats(initialStats));
     }
   }, [initialStats]);
 
@@ -28,8 +51,7 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
   // 뜬공(fo)에 희생플라이(sf)가 포함되어 있으므로 타수(AB) 계산 시 sf를 제외함
   const ab_outs = stats.so + stats.go + (stats.fo - (stats.sf || 0));
   const ab = hits + ab_outs;
-  // 타석(PA) = 타수(AB) + 볼넷(BB) + 사구(HBP) + 희플(SF) + 희번(SH)
-  const pa = ab + stats.bb + (stats.hbp || 0) + (stats.sf || 0) + (stats.sh || 0);
+  const pa = stats.pa;
   const ob = hits + stats.bb + (stats.hbp || 0);
   const tb = stats['1B'] + stats['2B'] * 2 + stats['3B'] * 3 + stats.hr * 4;
 
@@ -38,9 +60,12 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
   const slg = ab > 0 ? tb / ab : 0;
   const ops = obp + slg;
 
-  useImperativeHandle(ref, () => ({
-    setData: (newData) => setStats(newData),
-    getAbilityRaw: () => ({ ...stats, pa }),
+  useImperativeHandle(ref, (): BatterInputHandle => ({
+    setData: (newData) => setStats(new BatterStats(newData)),
+    getAbilityRaw: () => ({ 
+        ...stats, 
+        pa: stats.pa 
+    } as BatterStatsData),
     getAbility: () => {
       const validPa = Math.max(1, pa);
       return {
@@ -56,18 +81,17 @@ const BatterInput = forwardRef(({ onDataChange, id, initialStats }, ref) => {
     }
   }));
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     const val = parseFloat(value) || 0;
-    const nextStats = { ...stats, [name]: val };
-
-    // 변경된 시점의 계산된 pa를 함께 부모에게 전달
-    const currentHits = nextStats['1B'] + nextStats['2B'] + nextStats['3B'] + nextStats.hr;
-    // fo에 sf가 포함되어 있으므로 중복 합산 방지
-    const currentPa = currentHits + nextStats.so + nextStats.go + nextStats.fo + nextStats.bb + (nextStats.hbp || 0) + (nextStats.sh || 0);
+    
+    const nextStats = new BatterStats({ ...stats, [name]: val });
 
     setStats(nextStats);
-    if (onDataChange) onDataChange({ ...nextStats, pa: currentPa });
+    if (onDataChange) onDataChange({ 
+        ...nextStats, 
+        pa: nextStats.pa 
+    } as BatterStatsData);
   };
 
   return (

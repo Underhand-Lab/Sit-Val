@@ -1,7 +1,7 @@
 import React from 'react'
-import { Div, Box, Wrapper } from '@shared/bridges/UIBridge.ts'
+import { Div, Box, Wrapper } from '@shared/bridges/UIBridge'
 
-function HomePage() {
+const HomePage: React.FC = () => {
   return (
     <Wrapper >
       <Div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>

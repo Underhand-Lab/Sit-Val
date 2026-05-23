@@ -1,31 +1,34 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 
 import { Box, Div, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
 
-import * as TransitionEngine from '@sit-val/lib/transition-engine/index.js'
-import * as Calc from "@sit-val/lib/sabermetrics/calc.js";
+import * as TransitionEngine from '@sit-val/lib/transition-engine/'
+import * as Calc from "@sit-val/lib/sabermetrics/calc";
 
-import VisualizerBox from '@sit-val/components/VisualizerBox.jsx';
-import BatterInput from '@sit-val/components/BatterInput.jsx';
-import RunnerInput from '@sit-val/components/RunnerInput.jsx';
+import VisualizerBox from '@sit-val/components/VisualizerBox';
+import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
+import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput';
 import Popup from '@shared/components/Modal'
 
-import { calculateRE } from '../../@apps/features/league/api/re-league.js';
-import Visualizer9RE from '../../@apps/features/league/components/Visualizer9RE.jsx';
-import RE24Visualizer from '../../@apps/features/league/components/RE24Visualizer.jsx';
-import LeagueVisualizer from '../../@apps/features/league/components/LeagueVisualizer.jsx';
-import RunValueVisualizer from '../../@apps/features/league/components/RunValueVisualizer.jsx';
-import LeagueBigInningVisualizer from '../../@apps/features/league/components/LeagueBigInningVisualizer.jsx';
-import PersonalVisualizer from '../../@apps/features/league/components/PersonalVisualizer.jsx'
+import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
+import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { RunnerStats } from '@sit-val/types/RunnerStats';
+
+import Visualizer9RE from '../features/league/components/Visualizer9RE';
+import RE24Visualizer from '../features/league/components/RE24Visualizer';
+import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
+import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
+import LeagueBigInningVisualizer from '../features/league/components/LeagueBigInningVisualizer';
+import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
 
 // 초기 상태를 상수로 분리하는 것이 좋습니다.
-const INITIAL_BATTER_STATS = {
+const INITIAL_BATTER_STATS: BatterStatsData = {
   '1B': 65, '2B': 23, '3B': 0, hr: 56,
   bb: 111, so: 89, go: 117, fo: 135,
-  sf: 6, sh: 0, hbp: 0
+  sf: 6, sh: 0, hbp: 0, pa: 596
 };
 
-const INITIAL_RUNNER_STATS = {
+const INITIAL_RUNNER_STATS: RunnerStats = {
   passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03,
   s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40,
   '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30,
@@ -35,35 +38,35 @@ const INITIAL_RUNNER_STATS = {
 };
 
 function LeaguePage() {
-  const batterRef = useRef(null)
-  const runnerRef = useRef(null)
+  const batterRef = useRef<BatterInputHandle>(null)
+  const runnerRef = useRef<RunnerInputHandle>(null)
   const transitionEngine = new TransitionEngine.Standard()
 
   const [isBatterOpen, setIsBatterOpen] = useState(false);
   const [isRunnerOpen, setIsRunnerOpen] = useState(false);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-  const [leagueBatterStats, setLeagueBatterStats] = useState(INITIAL_BATTER_STATS);
+  const [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS);
   const [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
 
   // 상태 관리: 시각화 도구 리스트와 계산 결과 데이터
-  const [activeTools, setActiveTools] = useState([
+  const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
     { id: 1, Component: Visualizer9RE },
     { id: 2, Component: RE24Visualizer },
     { id: 3, Component: LeagueVisualizer },
     { id: 4, Component: RunValueVisualizer },
     { id: 5, Component: PersonalVisualizer },
   ])
-  const [vizData, setVizData] = useState(null)
+  const [vizData, setVizData] = useState<[RECalculationResult, Calc.WOBAWeights, number, number, number] | null>(null)
 
-  const addTool = (Component) => {
+  const addTool = (Component: React.ComponentType<any>) => {
     setActiveTools(prev => [...prev, { id: Date.now(), Component }]);
     setIsToolMenuOpen(false);
   }
 
   // Helper function to calculate batter abilities from raw stats
   // This logic mirrors the getAbility method in BatterInput.jsx
-  const calculateBatterAbilityFromRawStats = (rawStats) => {
+  const calculateBatterAbilityFromRawStats = (rawStats: BatterStatsData) => {
     const hits = (rawStats['1B'] || 0) + (rawStats['2B'] || 0) + (rawStats['3B'] || 0) + (rawStats.hr || 0);
     // FO에 SF가 포함된 기준의 PA 계산 로직 적용
     const calculatedPa = hits + (rawStats.so || 0) + (rawStats.go || 0) + (rawStats.fo || 0) + 
@@ -82,12 +85,12 @@ function LeaguePage() {
   };
 
   // BatterInput에서 데이터 변경 시 호출될 콜백
-  const handleLeagueBatterDataChange = (newStats) => {
+  const handleLeagueBatterDataChange = (newStats: BatterStatsData) => {
     setLeagueBatterStats(newStats);
   };
 
   // RunnerInput에서 데이터 변경 시 호출될 콜백
-  const handleLeagueRunnerDataChange = (newStats) => {
+  const handleLeagueRunnerDataChange = (newStats: RunnerStats) => {
     setLeagueRunnerStats(newStats);
   };
 
@@ -107,7 +110,7 @@ function LeaguePage() {
     const weights = Calc.calculateWeightedRunValue(leagueBatter, ret['runValue']);
     const lgWobaRaw = Calc.calculateCustomWOBA(weights, leagueBatter);
     const wOBAScale = 0.33 / lgWobaRaw;
-    const runPerPa = Calc.calculateLeagueRunPerPA(ret['R'][0][0], leagueBatter);
+    const runPerPa = Calc.calculateLeagueRunPerPA(ret.R[0], leagueBatter);
 
     setVizData([ret, weights, lgWobaRaw, wOBAScale, runPerPa]);
   };

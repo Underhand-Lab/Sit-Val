@@ -1,10 +1,16 @@
+import React from 'react';
 import { vars } from "@shared/bridges/UIBridge";
+import { RECalculationResult } from '../api/re-league';
 
-const RunValueVisualizer = ({ data }) => {
+interface RunValueVisualizerProps {
+  data: [RECalculationResult] | null;
+}
+
+const RunValueVisualizer: React.FC<RunValueVisualizerProps> = ({ data }) => {
   if (!data || !data[0]?.runValue) return null;
   const runValueData = data[0].runValue;
 
-  const labels = {
+  const labels: Record<string, string> = {
     "hr": "홈런",
     "3B": "3루타",
     "2B": "2루타",
@@ -16,7 +22,7 @@ const RunValueVisualizer = ({ data }) => {
   };
 
   const sortedItems = Object.keys(runValueData)
-    .map(key => ({ name: key, value: runValueData[key].value }))
+    .map(key => ({ name: key, value: (runValueData as any)[key].value }))
     .sort((a, b) => b.value - a.value);
 
   return (

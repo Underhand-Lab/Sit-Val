@@ -1,11 +1,13 @@
 // rule-engine/RuleEngine.js
-class TransitionEngineV4 {
+import { RunnerStats } from '../../types/RunnerStats';
+import { GameState, Transition, ActionType, ITransitionEngine } from './types';
 
+class TransitionEngineV4 implements ITransitionEngine {
     /**
      * 3루 도루 처리 (2루 주자 -> 3루)
      */
-    applyStealToThird(transitions, r, currentOut) {
-        const next = [];
+    applyStealToThird(transitions: Transition[], r: RunnerStats, currentOut: number): Transition[] {
+        const next: Transition[] = [];
         transitions.forEach(t => {
             const [b1, b2, b3] = t.bases;
             const totalOuts = currentOut + t.outDelta;
@@ -28,8 +30,8 @@ class TransitionEngineV4 {
     /**
      * 2루 도루 처리 (1루 주자 -> 2루)
      */
-    applyStealToSecond(transitions, r, currentOut) {
-        const next = [];
+    applyStealToSecond(transitions: Transition[], r: RunnerStats, currentOut: number): Transition[] {
+        const next: Transition[] = [];
         transitions.forEach(t => {
             const [b1, b2, b3] = t.bases;
             const totalOuts = currentOut + t.outDelta;
@@ -53,24 +55,25 @@ class TransitionEngineV4 {
      * 도루 시뮬레이션 메인 래퍼
      * 순서: 3루 도루 시도 -> 2루 도루 시도 -> (2루 도루 성공 주자의) 3루 도루 시도
      */
-    applyBasestealing(transitions, r, currentOut) {
+    applyBasestealing(transitions: Transition[], r: RunnerStats, currentOut: number): Transition[] {
         let res = transitions;
         res = this.applyStealToThird(res, r, currentOut);  // 기존 2루 주자 처리
         res = this.applyStealToSecond(res, r, currentOut); // 1루 주자 처리 (2루 비었을 때)
         res = this.applyStealToThird(res, r, currentOut);  // 2루로 온 주자의 추가 3루 도루 시도
         return res;
     }
-    applyPassedBall(transitions, r, currentOut) {
+
+    applyPassedBall(transitions: Transition[], r: RunnerStats, currentOut: number): Transition[] {
         const p_pb = r['passedball'] || 0;
 
         // 폭투 확률이 0이거나 너무 낮으면 계산 낭비를 방지하기 위해 즉시 반환
         if (p_pb <= 0) return transitions;
 
-        const processTransitions = (tList, depth = 0) => {
+        const processTransitions = (tList: Transition[], depth = 0): Transition[] => {
             // 무한 루프 방지 (한 타석에서 폭투가 3번 이상 일어날 확률은 무시 가능)
             if (depth > 2) return tList;
 
-            const nextLevel = [];
+            const nextLevel: Transition[] = [];
             let hasNewPB = false;
 
             tList.forEach(t => {
@@ -86,7 +89,7 @@ class TransitionEngineV4 {
                     nextLevel.push({ ...t, prob: t.prob * p_no });
 
                     // 폭투 발생 (모든 주자 1베이스 진루)
-                    const newBases = [0, b1, b2];
+                    const newBases: [number, number, number] = [0, b1, b2];
                     const newRuns = t.runs + b3;
 
                     nextLevel.push({
@@ -110,7 +113,10 @@ class TransitionEngineV4 {
 
                 // PB가 발생한 상태들에 대해서만 재귀 호출 (플래그 삭제 후 진행)
                 const afterNextPB = processTransitions(
-                    pbOccurred.map(p => { delete p.isPB; return p; }),
+                    pbOccurred.map(p => {
+                        const { isPB, ...rest } = p;
+                        return rest;
+                    }),
                     depth + 1
                 );
 
@@ -123,9 +129,9 @@ class TransitionEngineV4 {
         return processTransitions(transitions);
     }
 
-    getTransitions(action, state, r) {
+    getTransitions(action: ActionType, state: GameState, r: RunnerStats): Transition[] {
         const { out, b1, b2, b3 } = state;
-        const T = [];
+        const T: Transition[] = [];
 
         switch (action) {
 

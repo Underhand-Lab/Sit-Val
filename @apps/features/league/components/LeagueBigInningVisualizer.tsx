@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Box, InputNumber, H3 } from  '@shared/bridges/UIBridge';
+import { RECalculationResult } from '../api/re-league';
 
-function getBigInningProb(mu, variance, k = 1) {
+function getBigInningProb(mu: number, variance: number, k: number = 1): number {
     if (k <= 0) return 1.0; 
     if (mu <= 1e-9) return 0.0;
 
-    let prob0; 
-    let getNextTerm; 
+    let prob0: number; 
+    let getNextTerm: (currentProb: number, i: number) => number; 
 
     if (variance <= mu + 1e-9) {
         prob0 = Math.exp(-mu);
@@ -31,7 +32,11 @@ function getBigInningProb(mu, variance, k = 1) {
     return Math.max(0, Math.min(1, 1 - probLessThanK));
 }
 
-const LeagueBigInningVisualizer = ({ data }) => {
+interface LeagueBigInningVisualizerProps {
+  data: [RECalculationResult & { R: number[] | number[][], variance: number[] | number[][] }] | null;
+}
+
+const LeagueBigInningVisualizer: React.FC<LeagueBigInningVisualizerProps> = ({ data }) => {
   const [goalRun, setGoalRun] = useState(1);
 
   if (!data || !data[0]) return null;
@@ -45,13 +50,13 @@ const LeagueBigInningVisualizer = ({ data }) => {
   const runnerStates = ["주자 없음", "1루", "2루", "3루", "1,2루", "1,3루", "2,3루", "만루"];
 
   return (
-    <Div>
+    <Box>
       <H3 style={{ margin: '0 0 10px 0' }}>
         <InputNumber
           className="neumorphism-input" 
           value={goalRun} 
           min="1"
-          onChange={(e) => setGoalRun(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e: any) => setGoalRun(Math.max(1, parseInt(e.target.value) || 1))}
           style={{ width: '60px' }}
         />
         <span>점 이상 확률</span>
@@ -68,9 +73,9 @@ const LeagueBigInningVisualizer = ({ data }) => {
         </thead>
         <tbody>
           {Array.from({ length: 8 }).map((_, j) => {
-            const getProb = (idx) => {
-                const mu = Array.isArray(R[idx]) ? R[idx][0] : R[idx];
-                const v = Array.isArray(varData[idx]) ? varData[idx][0] : varData[idx];
+            const getProb = (idx: number) => {
+                const mu = Array.isArray(R[idx]) ? (R[idx] as number[])[0] : (R[idx] as number);
+                const v = Array.isArray(varData[idx]) ? (varData[idx] as number[])[0] : (varData[idx] as number);
                 return (getBigInningProb(mu, v, goalRun) * 100).toFixed(2);
             };
             return (
@@ -84,7 +89,7 @@ const LeagueBigInningVisualizer = ({ data }) => {
           })}
         </tbody>
       </table>
-    </Div>
+    </Box>
   );
 };
 

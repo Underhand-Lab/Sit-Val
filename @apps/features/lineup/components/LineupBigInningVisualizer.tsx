@@ -1,12 +1,13 @@
 import { Div, Select, InputNumber, vars } from '@shared/bridges/UIBridge';
 import React, { useState } from 'react';
+import { LineupCalculationResult } from '../api/re-line-up';
 
-function getBigInningProb(mu, variance, k = 1) {
+function getBigInningProb(mu: number, variance: number, k: number = 1): number {
   if (k <= 0) return 1.0;
   if (mu <= 1e-9) return 0.0;
 
-  let prob0;
-  let getNextTerm;
+  let prob0: number;
+  let getNextTerm: (currentProb: number, i: number) => number;
 
   if (variance <= mu + 1e-9) {
     prob0 = Math.exp(-mu);
@@ -31,7 +32,11 @@ function getBigInningProb(mu, variance, k = 1) {
   return Math.max(0, Math.min(1, 1 - probLessThanK));
 }
 
-const LineupBigInningVisualizer = ({ data }) => {
+interface LineupBigInningVisualizerProps {
+  data: [LineupCalculationResult] | null;
+}
+
+const LineupBigInningVisualizer: React.FC<LineupBigInningVisualizerProps> = ({ data }) => {
   const [batterIdx, setBatterIdx] = useState(0);
   const [goalRun, setGoalRun] = useState(1);
 
@@ -53,8 +58,8 @@ const LineupBigInningVisualizer = ({ data }) => {
         flexDirection: 'row', alignItems: 'center',
         justifyContent: 'center', gap: '10px',
       }}><Select
-          value={batterIdx}
-          onChange={(e) => setBatterIdx(parseInt(e.target.value))}
+          value={batterIdx.toString()}
+          onChange={(e: any) => setBatterIdx(parseInt(e.target.value))}
           options={Array.from({ length: 9 }).map((_, i) => ({
             value: i,
             label: `${i + 1}번 타자`,
@@ -65,7 +70,7 @@ const LineupBigInningVisualizer = ({ data }) => {
           className="neumorphism-input"
           value={goalRun}
           min="1"
-          onChange={(e) => setGoalRun(Math.max(1, parseInt(e.target.value) || 1))}
+          onChange={(e: any) => setGoalRun(Math.max(1, parseInt(e.target.value) || 1))}
           style={{ maxWidth: '60px' }}
         />
         <span>점 이상 확률</span>
@@ -82,9 +87,9 @@ const LineupBigInningVisualizer = ({ data }) => {
         </thead>
         <tbody>
           {Array.from({ length: 8 }).map((_, j) => {
-            const getProb = (idx) => {
-              const mu = Array.isArray(R[idx]) ? R[idx][0] : R[idx];
-              const v = Array.isArray(varData[idx]) ? varData[idx][0] : varData[idx];
+            const getProb = (idx: number) => {
+              const mu = Array.isArray(R[idx]) ? (R[idx] as any)[0] : R[idx];
+              const v = Array.isArray(varData[idx]) ? (varData[idx] as any)[0] : varData[idx];
               return (getBigInningProb(mu, v, goalRun) * 100).toFixed(2);
             };
             return (

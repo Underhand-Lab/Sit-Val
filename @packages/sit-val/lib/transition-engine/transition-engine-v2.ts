@@ -1,59 +1,12 @@
 // rule-engine/RuleEngine.js
-class TransitionEngineV3 {
+import { RunnerStats } from '../../types/RunnerStats';
+import { GameState, Transition, ActionType, ITransitionEngine } from './types';
 
-    /**
-     * @param {Array} transitions - 타석 결과로 생성된 전이 배열
-     * @param {Object} r - 확률 파라미터 객체
-     * @param {number} currentOut - 현재 상태의 아웃 카운트
-     */
-    applyBasestealing(transitions, r, currentOut) {
-        const finalTransitions = [];
+class TransitionEngineV2 implements ITransitionEngine {
 
-        transitions.forEach(t => {
-            const [b1, b2, b3] = t.bases;
-            
-            // 도루 가능 상황 체크:
-            // 1. 타석 결과 후 1루에 주자가 있고 2루가 비어있음
-            // 2. 타석 결과 후 아웃 카운트가 3 미만 (이닝이 끝나지 않음)
-            const totalOutsAfterAction = currentOut + t.outDelta;
-
-            if (b1 && !b2 && totalOutsAfterAction < 3) {
-                const p_sb = r['s_r1_r2_safe'] || 0; 
-                const p_cs = r['s_r1_r2_out'] || 0; 
-                const p_no_attempt = 1 - p_sb - p_cs;
-
-                // 1. 도루 시도 안 함
-                finalTransitions.push({
-                    ...t,
-                    prob: t.prob * p_no_attempt
-                });
-
-                // 2. 도루 성공 (1루 주자 -> 2루)
-                finalTransitions.push({
-                    ...t,
-                    prob: t.prob * p_sb,
-                    bases: [0, 1, b3]
-                });
-
-                // 3. 도루 실패 (1루 주자 삭제, outDelta 증가)
-                finalTransitions.push({
-                    ...t,
-                    prob: t.prob * p_cs,
-                    outDelta: t.outDelta + 1,
-                    bases: [0, 0, b3] // b2는 원래 비어있었으므로 1루 주자만 제거
-                });
-            } else {
-                // 도루 상황이 아니면 원본 유지
-                finalTransitions.push(t);
-            }
-        });
-
-        return finalTransitions;
-    }
-
-    getTransitions(action, state, r) {
+    getTransitions(action: ActionType, state: GameState, r: RunnerStats): Transition[] {
         const { out, b1, b2, b3 } = state;
-        const T = [];
+        const T: Transition[] = [];
 
         switch (action) {
 
@@ -280,8 +233,8 @@ class TransitionEngineV3 {
                 break;
         }
 
-        return this.applyBasestealing(T, r, out);
+        return T;
     }
 }
 
-export { TransitionEngineV3 };
+export { TransitionEngineV2 };

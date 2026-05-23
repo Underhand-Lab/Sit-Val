@@ -1,27 +1,53 @@
+import { RunnerStats } from '../types/RunnerStats';
+import { ActionType, ITransitionEngine, Transition } from './transition-engine/types';
+
+export interface StateManager {
+    size(): number;
+    /** @returns [batterIndex, out, b3, b2, b1] */
+    reverseState(index: number): [number, number, number, number, number];
+    nextB(b: number): number;
+    getIndex(b: number, out: number, b3: number, b2: number, b1: number): number;
+}
+
+export interface MatrixBuilderResult {
+    P: number[][];
+    P_zero: number[][];
+    R: number[][];
+    R_sq: number[][];
+    R_bin: number[][];
+}
+
 /**
- * matrix-builder.js
+ * matrix-builder.ts
  * 야구 상황 데이터를 MRP 행렬 구조로 변환
  */
-export function matrixBuilder(abilities, runner, stateManager, transitionEngine) {
+export function matrixBuilder(
+    abilities: Record<string, number>[], // 각 타자의 Action별 확률 맵 배열
+    runner: RunnerStats,
+    stateManager: StateManager,
+    transitionEngine: ITransitionEngine
+): MatrixBuilderResult {
     
     const N = stateManager.size();
 
-    // 행렬 및 벡터 초기화
-    const P = Array(N + 1).fill(0).map(() => Array(N + 1).fill(0));
-    const P_zero = Array(N + 1).fill(0).map(() => Array(N + 1).fill(0));
-    const R = Array(N).fill(0).map(() => [0]);      // E[R]
-    const R_sq = Array(N).fill(0).map(() => [0]);   // E[R^2]
-    const R_bin = Array(N).fill(0).map(() => [0]);  // 기대 득점 빈도
+    // 행렬 및 벡터 초기화 (상태 개수 N + 흡수 상태 1개 = N+1)
+    const P: number[][] = Array(N + 1).fill(0).map(() => Array(N + 1).fill(0));
+    const P_zero: number[][] = Array(N + 1).fill(0).map(() => Array(N + 1).fill(0));
+    
+    // 보상 벡터 (N x 1)
+    const R: number[][] = Array(N).fill(0).map(() => [0]);      // E[R]
+    const R_sq: number[][] = Array(N).fill(0).map(() => [0]);   // E[R^2]
+    const R_bin: number[][] = Array(N).fill(0).map(() => [0]);  // 기대 득점 빈도 (P(R>0))
 
     for (let i = 0; i < N; i++) {
         const [b, out, b3, b2, b1] = stateManager.reverseState(i);
         const batter = abilities[b];
 
-        for (const action of Object.keys(batter)) {
+        for (const action of Object.keys(batter) as ActionType[]) {
             const pAction = batter[action] || 0;
             if (pAction <= 0) continue;
 
-            const transitions = transitionEngine.getTransitions(
+            const transitions: Transition[] = transitionEngine.getTransitions(
                 action,
                 { out, b1, b2, b3 },
                 runner
@@ -32,10 +58,10 @@ export function matrixBuilder(abilities, runner, stateManager, transitionEngine)
                 
                 // 다음 상태 인덱스 계산 (아웃 카운트가 3이 되면 N번 인덱스(흡수)로 이동)
                 const nextOut = out + t.outDelta;
-                let nextIdx;
+                let nextIdx: number;
                 
                 if (nextOut >= 3) {
-                    nextIdx = N; // 이닝 종료 상태
+                    nextIdx = N; // 이닝 종료 상태 (흡수 상태)
                 } else {
                     nextIdx = stateManager.getIndex(
                         stateManager.nextB(b),

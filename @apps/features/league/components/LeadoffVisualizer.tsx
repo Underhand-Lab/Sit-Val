@@ -1,6 +1,11 @@
 import React from 'react';
 
-const LeadoffVisualizer = ({ data }) => {
+interface LeadoffVisualizerProps {
+  // leadoff_vector는 각 타순별 이닝 시작 횟수를 담은 배열입니다.
+  data: [{ leadoff_vector: number[] }] | null;
+}
+
+const LeadoffVisualizer: React.FC<LeadoffVisualizerProps> = ({ data }) => {
   if (!data || !data[0]) return null;
   const ret = data[0];
 

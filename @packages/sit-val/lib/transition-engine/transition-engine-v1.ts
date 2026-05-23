@@ -1,9 +1,12 @@
 // rule-engine/RuleEngine.js
-class TransitionEngineV1 {
+import { RunnerStats } from '../../types/RunnerStats';
+import { GameState, Transition, ActionType, ITransitionEngine } from './types';
 
-    getTransitions(action, state, r) {
+class TransitionEngineV1 implements ITransitionEngine {
+
+    getTransitions(action: ActionType, state: GameState, r: RunnerStats): Transition[] {
         const { out, b1, b2, b3 } = state;
-        const T = [];
+        const T: Transition[] = [];
 
         switch (action) {
 

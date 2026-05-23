@@ -1,6 +1,11 @@
 import React from 'react';
 
-const Visualizer9RE = ({ data, isLineup = false }) => {
+interface Visualizer9REProps {
+  data: [{ total_re?: number, R?: number[][] }] | null;
+  isLineup?: boolean;
+}
+
+const Visualizer9RE: React.FC<Visualizer9REProps> = ({ data, isLineup = false }) => {
   if (!data || !data[0]) return null;
   const ret = data[0];
 
@@ -10,16 +15,17 @@ const Visualizer9RE = ({ data, isLineup = false }) => {
     expectedRuns = ret.total_re ? ret.total_re.toFixed(3) : '0.000';
   } else {
     // League의 경우 R[0][0] * 9
-    expectedRuns = ret['R'] ? (ret['R'][0][0] * 9).toFixed(3) : '0.000';
+    const R = ret['R'] as any;
+    expectedRuns = R ? ((Array.isArray(R[0]) ? R[0][0] : R[0]) * 9).toFixed(3) : '0.000';
   }
 
   return (
     <div className="result-9re">
       <div className="final-score" style={{ marginTop: '15px', fontSize: '1.2em', fontWeight: 'bold' }}>
         <p>⚾ 
-          <e-text key="label-team-expected-runs-per-9-innings">
+          <span key="label-team-expected-runs-per-9-innings">
             9이닝당 팀 기대 득점
-          </e-text>:
+          </span>:
           <span style={{ color: '#e74c3c', marginLeft: '5px' }}>
             {expectedRuns}
           </span>
