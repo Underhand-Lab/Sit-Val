@@ -1,19 +1,27 @@
-import React, { useState } from 'react';
-import { Div } from '../../../../bridges/UIBridge';
+import React, { useState, ReactNode } from 'react';
+import { Div, vars } from '../../../../bridges/UIBridge';
 
-const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) => {
+interface BottomSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: ReactNode;
+  initialHeight?: number;
+}
+
+const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }: BottomSheetProps) => {
   const [sheetHeight, setSheetHeight] = useState(initialHeight);
 
-  const handleResizeStart = (e) => {
-    const startY = e.clientY || (e.touches && e.touches[0].clientY);
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
+    const startY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
     const startHeight = sheetHeight;
 
-    const onMove = (moveEvent) => {
+    const onMove = (moveEvent: MouseEvent | TouchEvent) => {
       // 리사이즈 도중 배경이 스크롤되거나 움직이는 것을 방지
       if (moveEvent.cancelable) {
         moveEvent.preventDefault();
       }
-      const currentY = moveEvent.clientY || (moveEvent.touches && moveEvent.touches[0].clientY);
+      const currentY = 'clientY' in moveEvent ? moveEvent.clientY : moveEvent.touches[0].clientY;
       const delta = startY - currentY;
       const newHeight = Math.max(250, Math.min(window.innerHeight * 0.9, startHeight + delta));
       setSheetHeight(newHeight);
@@ -45,6 +53,7 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
           ...styles.container, 
           ...(isOpen ? styles.activeContainer : {}),
           height: `${sheetHeight}px`, 
+          backgroundColor: vars.box,
           transition: isOpen ? 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'none' 
         }}
       >
@@ -74,7 +83,7 @@ const BottomSheet = ({ isOpen, onClose, title, children, initialHeight = 500 }) 
   );
 };
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
     background: 'rgba(0,0,0,0.4)', zIndex: 1000,
@@ -84,7 +93,7 @@ const styles = {
   container: {
     position: 'fixed', bottom: 0, left: 0, right: 0,
     background: '#f8f9fa', zIndex: 1001,
-    padding: '20px', borderRadius: '20px 20px 0 0',
+    padding: '10px', borderRadius: '20px 20px 0 0',
     boxShadow: '0 -5px 20px rgba(0,0,0,0.1)',
     transform: 'translateY(100%)',
     maxHeight: '90vh',

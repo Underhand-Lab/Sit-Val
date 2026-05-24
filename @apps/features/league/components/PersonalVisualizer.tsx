@@ -10,9 +10,6 @@ interface PersonalVisualizerProps {
 }
 
 const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
-  if (!data || !data[0] || !data[1]) return null;
-  const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
-
   const [batterStats, setBatterStats] = useState<BatterStatsData>({
     '1B': 65, '2B': 23, '3B': 0, hr: 56,
     bb: 111, so: 89, go: 117, fo: 135,
@@ -22,11 +19,11 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   const [isBatterOpen, setIsBatterOpen] = useState(false);
   const batterRef = useRef<BatterInputHandle>(null);
 
-  useEffect(() => {
-    if (batterRef.current) {
-      setBatterStats(batterRef.current.getAbilityRaw());
-    }
-  }, []);
+  if (!data || !data[0] || !data[1]) return null;
+  const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
+
+  // 컴포넌트 마운트 시 초기 데이터를 가져오는 로직 (필요한 경우)
+  // 이 로직은 sheet가 열려있을 때만 유효하므로 현재는 batterStats의 초기값 설정으로 대체되었습니다.
 
   const handleBatterChange = (newStats: BatterStatsData) => {
     setBatterStats(newStats);
@@ -72,7 +69,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   return (
     <Div className="result-personal">
       <H3 style={{ margin: '0 0 10px 0' }}>개인 타격 가치</H3>
-      <Div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+      <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px'}}>
         <Box>
           <Div style={{ padding: '10px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
             <Div style={{ flex: 1 }}>

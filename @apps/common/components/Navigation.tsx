@@ -2,8 +2,13 @@ import React, { useState } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Div, vars } from '@shared/bridges/UIBridge'
 
+interface NavItemData {
+    name: string;
+    path: string;
+}
+
 const Navigation = () => {
-    const navItems = [
+    const navItems: NavItemData[] = [
         { name: '리그 분석', path: '/league' },
         { name: '라인업 분석', path: '/lineup' },
     ];
@@ -29,13 +34,17 @@ const Navigation = () => {
     );
 };
 
-const NavItem = ({ item }) => {
+interface NavItemProps {
+    item: NavItemData;
+}
+
+const NavItem = ({ item }: NavItemProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
     return (
         <NavLink
             to={item.path}
-            style={({ isActive }) => ({
+            style={({ isActive }: { isActive: boolean }) => ({
                 ...styles.navLink,
                 ...(isActive ? styles.navLinkActive : {}),
                 ...(isHovered ? styles.navLinkHover : {}),
@@ -48,7 +57,7 @@ const NavItem = ({ item }) => {
     );
 };
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
     navContainer: {
         position: 'sticky',
         top: 0,

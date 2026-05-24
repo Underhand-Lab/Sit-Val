@@ -1,7 +1,7 @@
-import { useState, useImperativeHandle, forwardRef, useEffect, ChangeEvent } from 'react';
+import React, { useState, useImperativeHandle, forwardRef, useEffect, ChangeEvent } from 'react';
 import { InputNumber } from '@shared/bridges/UIBridge';
 
-import { BatterStats, BatterStatsData } from '../types/BatterStats';
+import { BatterStatsData } from '../types/BatterStats';
 
 export interface BatterInputHandle {
   setData: (newData: BatterStatsData) => void;
@@ -25,7 +25,7 @@ interface BatterInputProps {
 }
 
 const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataChange, id, initialStats }, ref) => {
-  const [stats, setStats] = useState<BatterStats>(new BatterStats({
+  const [stats, setStats] = useState<BatterStatsData>(initialStats || {
     bb: 111,
     '1B': 65,
     '2B': 23,
@@ -37,23 +37,27 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
     sf: 0,
     sh: 0,
     hbp: 0,
-  }));
+  });
 
   // initialStats prop이 변경될 때마다 내부 stats 상태를 업데이트
   useEffect(() => {
     if (initialStats) {
-      setStats(new BatterStats(initialStats));
+      setStats(initialStats);
     }
   }, [initialStats]);
 
   // 지표 기반 자동 계산 로직
-  const hits = stats['1B'] + stats['2B'] + stats['3B'] + stats.hr;
+  const hits = (stats['1B'] || 0) + (stats['2B'] || 0) + (stats['3B'] || 0) + (stats.hr || 0);
   // 뜬공(fo)에 희생플라이(sf)가 포함되어 있으므로 타수(AB) 계산 시 sf를 제외함
-  const ab_outs = stats.so + stats.go + (stats.fo - (stats.sf || 0));
+  const ab_outs = (stats.so || 0) + (stats.go || 0) + ((stats.fo || 0) - (stats.sf || 0));
   const ab = hits + ab_outs;
-  const pa = stats.pa;
-  const ob = hits + stats.bb + (stats.hbp || 0);
-  const tb = stats['1B'] + stats['2B'] * 2 + stats['3B'] * 3 + stats.hr * 4;
+  
+  // PA가 객체에 없을 경우 직접 계산 (LeaguePage 로직과 동일)
+  const calculatedPa = hits + (stats.bb || 0) + (stats.hbp || 0) + (stats.so || 0) + (stats.go || 0) + (stats.fo || 0) + (stats.sh || 0);
+  const pa = stats.pa || calculatedPa;
+
+  const ob = hits + (stats.bb || 0) + (stats.hbp || 0);
+  const tb = (stats['1B'] || 0) + (stats['2B'] || 0) * 2 + (stats['3B'] || 0) * 3 + (stats.hr || 0) * 4;
 
   const avg = ab > 0 ? hits / ab : 0;
   const obp = pa > 0 ? ob / pa : 0;
@@ -61,22 +65,19 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
   const ops = obp + slg;
 
   useImperativeHandle(ref, (): BatterInputHandle => ({
-    setData: (newData) => setStats(new BatterStats(newData)),
-    getAbilityRaw: () => ({ 
-        ...stats, 
-        pa: stats.pa 
-    } as BatterStatsData),
+    setData: (newData) => setStats(newData),
+    getAbilityRaw: () => ({ ...stats, pa } as BatterStatsData),
     getAbility: () => {
       const validPa = Math.max(1, pa);
       return {
-        '1B': stats['1B'] / validPa,
-        '2B': stats['2B'] / validPa,
-        '3B': stats['3B'] / validPa,
-        hr: stats.hr / validPa,
-        bb: stats.bb / validPa,
-        so: stats.so / validPa,
-        go: stats.go / validPa,
-        fo: stats.fo / validPa,
+        '1B': (stats['1B'] || 0) / validPa,
+        '2B': (stats['2B'] || 0) / validPa,
+        '3B': (stats['3B'] || 0) / validPa,
+        hr: (stats.hr || 0) / validPa,
+        bb: (stats.bb || 0) / validPa,
+        so: (stats.so || 0) / validPa,
+        go: (stats.go || 0) / validPa,
+        fo: (stats.fo || 0) / validPa,
       };
     }
   }));
@@ -85,12 +86,12 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
     const { name, value } = e.target;
     const val = parseFloat(value) || 0;
     
-    const nextStats = new BatterStats({ ...stats, [name]: val });
+    const nextStats = { ...stats, [name]: val } as BatterStatsData;
 
     setStats(nextStats);
     if (onDataChange) onDataChange({ 
         ...nextStats, 
-        pa: nextStats.pa 
+        pa: nextStats.pa || calculatedPa 
     } as BatterStatsData);
   };
 

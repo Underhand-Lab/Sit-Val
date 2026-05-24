@@ -179,7 +179,7 @@ function LeaguePage() {
 
       <FixedFooter>
         <Box className="container">
-          <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center', overflow: 'auto' }}>
+          <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center' }}>
             <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'left', flexGrow: 1, gap: '10px' }}>
               <Button onClick={() => setIsBatterOpen(true)} style={{ textWrap: 'nowrap' }}>
                 리그 타격 기록 설정

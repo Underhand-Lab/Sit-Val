@@ -1,16 +1,21 @@
-import React from 'react';
-import { Box, Div, Button } from '@shared/bridges/UIBridge';
+import React, { ReactNode } from 'react';
+import { Box, Button } from '@shared/bridges/UIBridge';
 
-function VisualizerBox({ children, onRemove }) {
+interface VisualizerBoxProps {
+  children?: ReactNode;
+  onRemove?: () => void;
+}
+
+function VisualizerBox({ children, onRemove }: VisualizerBoxProps) {
   return (
     <Box style={styles.container}>
       <Button noHover style={styles.closeButton} onClick={onRemove}>✕</Button>
       {children}
-    </Box >
+    </Box>
   );
 }
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
     padding: '20px',
     margin: 0,
