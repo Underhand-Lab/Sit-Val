@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-
-import Popup from '@shared/components/Modal'; // Popup 컴포넌트 임포트
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import Popup from '@shared/components/Modal';
 import { Box, Div, H3, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
 
-import VisualizerBox from '@sit-val/components/VisualizerBox'
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput'
 import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput'
 
@@ -15,233 +14,235 @@ import Lineup9RE from '../features/lineup/components/Lineup9RE'
 import LineupRE24 from '../features/lineup/components/LineupRE24'
 import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
 
-interface Player extends BatterStatsData {
-  id: number;
-  name: string;
+import { db } from '../services/db';
+import { Player, YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
+import { calculateBatterAbility } from '../common/api/stats';
+import { PageHeader } from '../common/components/PageHeader';
+import { VisualizerList } from '../common/components/VisualizerList';
+import { DataManagementView } from '../common/components/DataManagementView';
+
+interface LineupPlayerDisplay extends YearlyPlayer {
+	name: string;
 }
 
-const LineupPage: React.FC = () => {
-  const batterRef = useRef<BatterInputHandle>(null)
-  const runnerRef = useRef<RunnerInputHandle>(null)
+const INITIAL_RUNNER_STATS: RunnerStats = {
+	passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03,
+	s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40,
+	'1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30,
+	'1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7,
+	'2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85,
+	fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3
+};
 
-  // 상태 관리
-  const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
-    { id: 1, Component: (props: any) => <Lineup9RE {...props} /> },
-    { id: 2, Component: (props: any) => <LineupRE24 {...props} /> },
-  ])
-  const [vizData, setVizData] = useState<[LineupCalculationResult] | null>(null)
+const NewLineupPage: React.FC = () => {
+	const { id } = useParams();
+	const [searchParams] = useSearchParams();
+	const navigate = useNavigate();
+	const batterRef = useRef<BatterInputHandle>(null);
+	const runnerRef = useRef<RunnerInputHandle>(null);
 
-  // 선수 및 타순 상태
-  const [players, setPlayers] = useState<Player[]>([
-    {
-      id: 1, name: '이승엽',
-      '1B': 65, '2B': 23, '3B': 0, hr: 56,
-      bb: 111, so: 89, go: 117, fo: 135,
-      sf: 6, sh: 0, hbp: 0
-    },
-    ...Array.from({ length: 8 }, (_, i) => ({
-      id: i + 2, name: `선수 ${i + 2}`, '1B': 150, '2B': 40, '3B': 5, hr: 20, bb: 100, so: 200, go: 250, fo: 235, sf: 0, sh: 0, hbp: 0
-    }))
-  ]);
-  const [lineup, setLineup] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9]); // Player IDs
+	const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
+		{ id: 1, Component: Lineup9RE }, { id: 2, Component: LineupRE24 },
+	]);
+	const [vizData, setVizData] = useState<[LineupCalculationResult] | null>(null);
 
-  // 주자 설정 상태 관리 (초기값)
-  const [lineupRunnerStats, setLineupRunnerStats] = useState({
-    passedball: 0.03,
-    s_r1_r2_safe: 0.10,
-    s_r1_r2_out: 0.03,
-    s_r2_r3_safe: 0.004,
-    s_r2_r3_out: 0.001,
-    '1B_r2_home_safe': 0.40,
-    '1B_r2_home_out': 0.05,
-    '1B_r2_r3_safe': 0.55,
-    '1B_r1_r3_safe': 0.30,
-    '1B_r1_r3_out': 0.05,
-    '1B_r1_r2_safe': 0.65,
-    '2B_r1_home_safe': 0.7,
-    '2B_r1_home_out': 0.05,
-    '2B_r1_r3_safe': 0.25,
-    fo_r3_home_safe: 0.85,
-    fo_r3_home_out: 0.05,
-    fo_r3_r3_safe: 0.10,
-    go_r1_r2_out: 0.3,
-    go_b_r1_out: 0.3
-  });
+	const [availablePlayers, setAvailablePlayers] = useState<LineupPlayerDisplay[]>([]);
+	const [currentLineupPlayers, setCurrentLineupPlayers] = useState<LineupPlayerDisplay[]>([]);
+	const [lineupOrder, setLineupOrder] = useState<string[]>([]);
+	const [selectedYear, setSelectedYear] = useState<number>(2024);
+	const [leagueData, setLeagueData] = useState<YearlyLeague | null>(null);
 
-  // 시트 열림 상태
-  const [isPlayerListOpen, setPlayerListOpen] = useState(false);
-  const [isLineupEditOpen, setLineupEditOpen] = useState(false);
-  const [isRunnerOpen, setRunnerOpen] = useState(false);
-  const [isBatterEditOpen, setBatterEditOpen] = useState(false);
-  const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
-  const [editingPlayerId, setEditingPlayerId] = useState<number | null>(null);
-  const [editingPlayerStats, setEditingPlayerStats] = useState<Player | null>(null);
+	const [isEditMode, setIsEditMode] = useState(false);
+	const [lineupRunnerStats, setLineupRunnerStats] = useState<RunnerStats>(INITIAL_RUNNER_STATS);
+	const [originalLineupRunnerStats, setOriginalLineupRunnerStats] = useState<RunnerStats>(INITIAL_RUNNER_STATS);
 
-  const addTool = (Component: React.FC<any>, extraProps = {}) => {
-    setActiveTools(prev => [
-      ...prev,
-      { id: Date.now(), Component: (props) => <Component {...props} {...extraProps} /> }
-    ]);
-    setIsToolMenuOpen(false);
-  }
+	const [isPlayerListOpen, setPlayerListOpen] = useState(false);
+	const [isLineupEditOpen, setLineupEditOpen] = useState(false);
+	const [isRunnerOpen, setRunnerOpen] = useState(false);
+	const [isBatterEditOpen, setBatterEditOpen] = useState(false);
+	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+	const [editingYearlyPlayerId, setEditingYearlyPlayerId] = useState<string | null>(null);
+	const [editingPlayerStats, setEditingPlayerStats] = useState<BatterStatsData | null>(null);
 
-  const execute = useCallback(() => {
-    const lineupAbilities = lineup.map(id => {
-      const p = players.find(player => player.id === id)!;
-      // 하드코딩된 p.pa 대신 입력된 스탯 기반으로 정확한 PA 계산 (FO에 SF 포함 가정)
-      const hits = (p['1B'] || 0) + (p['2B'] || 0) + (p['3B'] || 0) + (p.hr || 0);
-      const pa = Math.max(1, hits + p.bb + (p.hbp || 0) + p.so + p.go + p.fo + (p.sh || 0));
-      return {
-        '1B': p['1B'] / pa, '2B': p['2B'] / pa, '3B': p['3B'] / pa,
-        hr: p.hr / pa, bb: p.bb / pa, so: p.so / pa, go: p.go / pa, fo: p.fo / pa,
-      };
-    });
+	const addTool = (Component: React.FC<any>) => {
+		setActiveTools(prev => [...prev, { id: Date.now(), Component }]);
+		setIsToolMenuOpen(false);
+	};
 
-    const ret = calculateLineupRE(lineupAbilities, lineupRunnerStats);
-    setVizData([ret]);
-  }, [players, lineup, lineupRunnerStats]);
+	const execute = useCallback(() => {
+		if (lineupOrder.length === 9) {
+			const abilities = lineupOrder.map(id => calculateBatterAbility(currentLineupPlayers.find(p => p.id === id)!.stats));
+			setVizData([calculateLineupRE(abilities, lineupRunnerStats)]);
+		} else setVizData(null);
+	}, [currentLineupPlayers, lineupOrder, lineupRunnerStats]);
 
-  useEffect(() => {
-    execute();
-  }, [execute]);
+	useEffect(() => {
+		const targetId = id === 'new' ? searchParams.get('from') : id;
+		if (!id) return;
+		const data = targetId ? db.getYearlyLineupById(targetId) : null;
+		if (data) { setLineupOrder(data.playerIds); setLineupRunnerStats(data.runnerStats); }
+		setIsEditMode(id === 'new');
+	}, [id, searchParams]);
 
-  // 선수 추가
-  const handleAddPlayer = () => {
-    const newId = Math.max(...players.map(p => p.id)) + 1;
-    const newPlayer = { ...players[0], id: newId, name: `새 선수 ${newId}` };
-    setPlayers([...players, newPlayer]);
-    startEditPlayer(newPlayer); // 생성 즉시 편집 시트 오픈
-  };
+	useEffect(() => { execute(); }, [execute]);
+	useEffect(() => {
+		const fetchPlayersAndLeague = async () => {
+			const playersWithStats = db.getPlayersWithYearlyStats(selectedYear);
+			setAvailablePlayers(playersWithStats);
+			const fetchedLeagueData = db.getYearlyLeagues('kbo').find(l => l.year === selectedYear);
+			if (fetchedLeagueData) setLeagueData(fetchedLeagueData);
+			else setLeagueData(null);
+		};
+		fetchPlayersAndLeague();
+	}, [selectedYear]);
 
-  // 선수 편집 시작
-  const startEditPlayer = (player: Player) => {
-    setEditingPlayerId(player.id);
-    setEditingPlayerStats(player); // Set the stats for the player being edited
-    setBatterEditOpen(true);
-  };
+	useEffect(() => {
+		const newCurrentLineupPlayers: LineupPlayerDisplay[] = [];
+		const newLineupOrder: string[] = [];
+		lineupOrder.forEach(yearlyPlayerId => {
+			const player = availablePlayers.find(p => p.id === yearlyPlayerId);
+			if (player) {
+				newCurrentLineupPlayers.push(player);
+				newLineupOrder.push(yearlyPlayerId);
+			}
+		});
+		while (newLineupOrder.length < 9) {
+			const placeholderId = `placeholder-${newLineupOrder.length + 1}`;
+			const placeholderPlayer: LineupPlayerDisplay = {
+				id: placeholderId, playerId: `temp-player-${newLineupOrder.length + 1}`, name: `선수 ${newLineupOrder.length + 1}`, year: selectedYear, yearlyTeamIds: [],
+				stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0, r: 0, rbi: 0 },
+				creatorId: db.getCurrentUser().id,
+			};
+			newCurrentLineupPlayers.push(placeholderPlayer);
+			newLineupOrder.push(placeholderId);
+		}
+		setCurrentLineupPlayers(newCurrentLineupPlayers.slice(0, 9));
+		setLineupOrder(newLineupOrder.slice(0, 9));
+	}, [availablePlayers, selectedYear]);
 
-  // 타자 데이터 변경 저장
-  const handleBatterDataChange = (updatedStats: BatterStatsData) => { // BatterInput에서 직접 updatedStats를 받음
-    if (!editingPlayerId) return;
-    // updatedStats는 이미 BatterInput에서 넘어온 최신 raw stats
-    setPlayers(prev => prev.map(p => p.id === editingPlayerId ? { ...updatedStats, id: p.id, name: p.name } : p));
-  };
+	useEffect(() => { if (isEditMode) setLineupRunnerStats(originalLineupRunnerStats); }, [isEditMode, originalLineupRunnerStats]);
 
-  // 주자 데이터 변경 저장
-  const handleRunnerDataChange = (updatedStats: RunnerStats) => {
-    setLineupRunnerStats(updatedStats);
-  };
+	const handleAddNewPlayerToDB = () => {
+		const newPlayerId = `new-player-${Date.now()}`;
+		const newPlayerBase: Player = { id: newPlayerId, name: `새 선수 ${Date.now()}` };
+		db.addPlayer(newPlayerBase);
+		const newYearlyPlayer: YearlyPlayer & { name: string } = {
+			id: `${newPlayerId}-${selectedYear}-${Date.now()}`, playerId: newPlayerId, name: newPlayerBase.name, year: selectedYear, yearlyTeamIds: [],
+			stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0, r: 0, rbi: 0 },
+			creatorId: db.getCurrentUser().id,
+		};
+		db.saveYearlyPlayer(newYearlyPlayer);
+		setAvailablePlayers(prev => [...prev, newYearlyPlayer as LineupPlayerDisplay]);
+		startEditPlayer(newYearlyPlayer.id, newYearlyPlayer.stats);
+	};
 
-  return (
-    <>
-      <Div id="wrapper">
-        <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', justifyContent: 'center',  padding: '20px'}}>
-          {activeTools.map(tool => (
-            <VisualizerBox key={tool.id} onRemove={() => setActiveTools(prev => prev.filter(t => t.id !== tool.id))}>
-              <tool.Component data={vizData} />
-            </VisualizerBox>
-          ))}
-        </Div>
+	const startEditPlayer = (yearlyPlayerId: string, stats: BatterStatsData) => {
+		setEditingYearlyPlayerId(yearlyPlayerId); setEditingPlayerStats(stats); setBatterEditOpen(true);
+	};
 
-        {/* 도구 선택 팝업 */}
-        <Div className={`bottom-sheet-overlay ${isToolMenuOpen ? 'active' : ''}`} onClick={() => setIsToolMenuOpen(false)} />
+	const handleBatterDataChange = (newStats: BatterStatsData) => {
+		if (!editingYearlyPlayerId) return; setEditingPlayerStats(newStats);
+	};
 
-        <Popup
-          isOpen={isToolMenuOpen}
-          onClose={() => setIsToolMenuOpen(false)}
-          title="분석 도구 추가"
-        >
-          <Div className="tool-grid">
-            <Button onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</Button>
-            <Button onClick={() => addTool(Lineup9RE)}>팀 기대 득점</Button>
-            <Button onClick={() => addTool(LineupRE24)}>팀 RE24</Button>
-            <Button onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</Button>
-          </Div>
-        </Popup>
+	const handleSaveEditedPlayerStats = useCallback(() => {
+		if (!editingYearlyPlayerId || !editingPlayerStats) return alert('저장할 데이터가 없습니다.');
+		const originalYearlyPlayer = availablePlayers.find(p => p.id === editingYearlyPlayerId);
+		if (!originalYearlyPlayer) return alert('원본 선수를 찾을 수 없습니다.');
+		const dataToSave: Omit<YearlyPlayer, 'creatorId'> = { ...originalYearlyPlayer, stats: { ...editingPlayerStats, r: 0, rbi: 0 } };
+		try {
+			db.saveYearlyPlayer(dataToSave);
+			setAvailablePlayers(db.getPlayersWithYearlyStats(selectedYear));
+			setBatterEditOpen(false);
+		} catch (e: any) { alert(e.message); }
+	}, [editingYearlyPlayerId, editingPlayerStats, availablePlayers, selectedYear, db]);
 
-        {/* 선수 명단 바텀 시트 */}
-        <BottomSheet
-          isOpen={isPlayerListOpen}
-          onClose={() => setPlayerListOpen(false)}
-          title="선수 명단"
-        >
-          <Div style={{ flex: 1, overflowY: 'auto' }}>
-            {players.map(p => (
-              <Div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee' }}>
-                <span>{p.name}</span>
-                <Button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p)}>편집</Button>
-              </Div>
-            ))}
-          </Div>
-          <Button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddPlayer}>선수 추가</Button>
-        </BottomSheet>
+	const handleRunnerDataChange = (updatedStats: RunnerStats) => { setLineupRunnerStats(updatedStats); };
 
-        {/* 타순 설정 바텀 시트 */}
-        <BottomSheet
-          isOpen={isLineupEditOpen}
-          onClose={() => setLineupEditOpen(false)}
-          title="타순 설정"
-        >
-          <Div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px' }}>
-            {lineup.map((playerId, idx) => (
-              <Div key={idx} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ minWidth: '60px' }}>{idx + 1}번 타자</span>
-                <select
-                  value={playerId}
-                  onChange={(e) => {
-                    const newLineup = [...lineup];
-                    newLineup[idx] = parseInt(e.target.value);
-                    setLineup(newLineup);
-                  }}
-                  style={{ flex: 1, padding: '8px' }}
-                >
-                  {players.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </Div>
-            ))}
-          </Div>
-          <Button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</Button>
-        </BottomSheet>
+	const handleSaveLineupStats = useCallback(() => {
+		const name = prompt('라인업 이름') || '새 라인업';
+		const res = db.saveYearlyLineup({ id: id !== 'new' ? id! : '', name, year: selectedYear, playerIds: lineupOrder, runnerStats: lineupRunnerStats });
+		navigate(`/lineup/${res.id}`); setIsEditMode(false);
+	}, [lineupRunnerStats, lineupOrder, selectedYear, id, navigate]);
 
-        {/* 주자 설정 바텀 시트 */}
-        <BottomSheet
-          isOpen={isRunnerOpen}
-          onClose={() => setRunnerOpen(false)}
-          title="주자 설정"
-        >
-          <RunnerInput
-            ref={runnerRef}
-            initialStats={lineupRunnerStats}
-            onDataChange={handleRunnerDataChange}
-          />
-        </BottomSheet>
+	if (!id) return <DataManagementView title="라인업" items={db.getData('yearlyLineups')} createPath="/lineup/new" renderItem={(l) => <Button onClick={() => navigate(`/lineup/${l.id}`)}>{l.name} ({l.year})</Button>} />;
+	if (id !== 'new' && !db.getYearlyLineupById(id)) return <Div style={{ padding: '40px' }}>404 - 라인업 없음</Div>;
 
-        {/* 타자 편집 바텀 시트 */}
-        <BottomSheet
-          isOpen={isBatterEditOpen}
-          onClose={() => setBatterEditOpen(false)}
-          title="타자 정보 편집"
-        >
-          <BatterInput
-            ref={batterRef}
-            initialStats={editingPlayerStats || undefined} // Pass the stats to BatterInput
-            onDataChange={handleBatterDataChange}
-          />
-        </BottomSheet>
-      </Div>
+	return (
+		<Div id="wrapper">
+			<PageHeader title="라인업 분석" subTitle={id} isEditMode={isEditMode} onEditToggle={() => isEditMode ? navigate('/lineup') : navigate(`/lineup/new?from=${id}`)} onSave={handleSaveLineupStats} showSave={true} />
+			<VisualizerList tools={activeTools} data={vizData} onRemove={(id) => setActiveTools(prev => prev.filter(t => t.id !== id))} />
+			<Popup isOpen={isToolMenuOpen} onClose={() => setIsToolMenuOpen(false)} title="분석 도구 추가">
+				<Div className="tool-grid">
+					<Button onClick={() => addTool(LeadoffVisualizer)}>선두타자 분석</Button>
+					<Button onClick={() => addTool(Lineup9RE)}>팀 기대 득점</Button>
+					<Button onClick={() => addTool(LineupRE24)}>팀 RE24</Button>
+					<Button onClick={() => addTool(LineupBigInningVisualizer)}>빅이닝 확률</Button>
+				</Div>
+			</Popup>
 
-      <FixedFooter>
-        <Box className="container">
-          <Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Button onClick={() => setPlayerListOpen(true)}>선수 명단</Button>
-            <Button onClick={() => setLineupEditOpen(true)}>타순 설정</Button>
-            <Button onClick={() => setRunnerOpen(true)}>주자 설정</Button>
-            <Button onClick={() => setIsToolMenuOpen(true)} style={{ marginLeft: 'auto' }}>도구 추가</Button>
-          </Div>
-        </Box>
-      </FixedFooter>
-    </>
-  )
+			<BottomSheet isOpen={isPlayerListOpen} onClose={() => setPlayerListOpen(false)} title="선수 명단">
+				<Div style={{ flex: 1, overflowY: 'auto' }}>
+					{availablePlayers.length === 0 && <p>등록된 선수가 없습니다. 새 선수를 추가해주세요.</p>}
+					{availablePlayers.map(p => (
+						<Div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee', gap: '10px' }}>
+							<span>{p.name}</span>
+							<Div style={{ display: 'flex', gap: '5px' }}>
+								<Button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p.id, p.stats)}>편집</Button>
+								<Button style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white' }} onClick={() => { if (currentLineupPlayers.length < 9) { setCurrentLineupPlayers(prev => [...prev, p]); setLineupOrder(prev => [...prev, p.id]); } }}>라인업 추가</Button>
+							</Div>
+						</Div>
+					))}
+				</Div>
+				<Button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddNewPlayerToDB}>새 선수 추가</Button>
+			</BottomSheet>
+
+			<BottomSheet isOpen={isLineupEditOpen} onClose={() => setLineupEditOpen(false)} title="타순 설정">
+				<Div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+					{lineupOrder.map((yearlyPlayerId, idx) => {
+						const playerInLineup = currentLineupPlayers.find(p => p.id === yearlyPlayerId);
+						return (
+							<Div key={idx} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+								<span style={{ minWidth: '60px' }}>{idx + 1}번 타자</span>
+								<select value={yearlyPlayerId} onChange={(e) => {
+									const selectedYearlyPlayerId = e.target.value;
+									const selectedPlayer = availablePlayers.find(p => p.id === selectedYearlyPlayerId);
+									if (selectedPlayer) {
+										const newOrder = [...lineupOrder]; newOrder[idx] = selectedYearlyPlayerId; setLineupOrder(newOrder);
+										setCurrentLineupPlayers(prev => prev.map((p, i) => i === idx ? selectedPlayer : p));
+									}
+								}} style={{ flex: 1, padding: '8px' }}>
+									{availablePlayers.map(p => <option key={p.id} value={p.id}>{p.name} ({p.year})</option>)}
+								</select>
+							</Div>
+						);
+					})}
+				</Div>
+				<Button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</Button>
+			</BottomSheet>
+
+			<BottomSheet isOpen={isRunnerOpen} onClose={() => setRunnerOpen(false)} title="주자 설정">
+				<RunnerInput ref={runnerRef} initialStats={lineupRunnerStats} onDataChange={handleRunnerDataChange} />
+			</BottomSheet>
+
+			<BottomSheet isOpen={isBatterEditOpen} onClose={() => setBatterEditOpen(false)} title="타자 정보 편집">
+				<BatterInput ref={batterRef} initialStats={editingPlayerStats || undefined} onDataChange={handleBatterDataChange} />
+				<Button onClick={handleSaveEditedPlayerStats} style={{ marginTop: '10px', backgroundColor: '#4CAF50', color: 'white' }}>저장하고 닫기</Button>
+			</BottomSheet>
+
+			<FixedFooter>
+				<Box className="container">
+					<Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+						{isEditMode ? <>
+						<Button onClick={() => setPlayerListOpen(true)}>선수 명단</Button>
+						<Button onClick={() => setLineupEditOpen(true)}>타순 설정</Button>
+						<Button onClick={() => setRunnerOpen(true)}>주자 설정</Button>
+						</> : <Button onClick={() => navigate('/lineup')}>목록</Button>}
+						<Button onClick={() => setIsToolMenuOpen(true)}>도구 추가</Button>
+					</Div>
+				</Box>
+			</FixedFooter>
+		</Div>
+	);
 }
 
-export default LineupPage
+export default NewLineupPage;

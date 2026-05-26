@@ -9,6 +9,7 @@ interface NavItemData {
 
 const Navigation = () => {
     const navItems: NavItemData[] = [
+        { name: '선수 분석', path: '/player' },
         { name: '리그 분석', path: '/league' },
         { name: '라인업 분석', path: '/lineup' },
     ];
