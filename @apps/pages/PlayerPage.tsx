@@ -51,8 +51,8 @@ const PlayerPage: React.FC = () => {
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
   const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
+    { id: '2', name: '기본 타격 지표', Component: PlayerBasicVisualizer },
     { id: '1', name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
-    { id: '2', name: '기본 타격 지표', Component: PlayerBasicVisualizer }
   ]);
 
   const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {

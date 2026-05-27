@@ -1,4 +1,4 @@
-import { Box, Div, vars, H3 } from '@shared/bridges/UIBridge';
+import { Div, vars, H3 } from '@shared/bridges/UIBridge';
 import React from 'react';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { calculateBasicStats } from '../../../common/api/baseball';
@@ -20,7 +20,7 @@ const PlayerBasicVisualizer: React.FC<PlayerBasicVisualizerProps> = ({ batterSta
 
   return (
     <Div className="result-basic" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <Box style={{ padding: '15px' }}>
+      <Div style={{ padding: '15px' }}>
         <H3 style={{ margin: '0 0 15px 0', fontSize: '1em' }}>기본 타격 지표</H3>
         <Div style={{ 
           display: 'grid', 
@@ -39,7 +39,7 @@ const PlayerBasicVisualizer: React.FC<PlayerBasicVisualizerProps> = ({ batterSta
           <StatItem label="장타율" value={basic.slg.toFixed(3)} />
           <StatItem label="OPS" value={basic.ops.toFixed(3)} color={vars.primary} />
         </Div>
-      </Box>
+      </Div>
     </Div>
   );
 };

@@ -50,6 +50,19 @@ export const db = {
       return { mode: 'fork', id: newId };
     }
   },
+
+  deleteYearlyLeague: (id: string) => {
+    const user = db.getCurrentUser();
+    if (!user) throw new Error('로그인이 필요합니다.');
+
+    let list = db.getData('yearlyLeagues') as YearlyLeague[];
+    const itemToDelete = list.find(l => l.id === id);
+    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
+      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
+    }
+    list = list.filter(l => l.id !== id);
+    db.saveData('yearlyLeagues', list);
+  },
   getYearlyLeagueById: (id: string) => {
     const list = db.getData('yearlyLeagues') as YearlyLeague[];
     return list.find(yl => yl.id === id);
@@ -94,6 +107,19 @@ export const db = {
     }
   },
 
+  deleteYearlyPlayer: (id: string) => {
+    const user = db.getCurrentUser();
+    if (!user) throw new Error('로그인이 필요합니다.');
+
+    let list = db.getData('yearlyPlayers') as YearlyPlayer[];
+    const itemToDelete = list.find(p => p.id === id);
+    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
+      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
+    }
+    list = list.filter(p => p.id !== id);
+    db.saveData('yearlyPlayers', list);
+  },
+
   // 라인업 주자 설정 관련
   saveLineupRunnerStats: (stats: RunnerStats) => {
     db.saveData('lineupRunnerStats', [stats]);
@@ -122,6 +148,19 @@ export const db = {
     const newId = `lineup-${Date.now()}`;
     db.saveData('yearlyLineups', [...list, { ...data, id: newId, creatorId: user.id }]);
     return { mode: 'fork', id: newId };
+  },
+
+  deleteYearlyLineup: (id: string) => {
+    const user = db.getCurrentUser();
+    if (!user) throw new Error('로그인이 필요합니다.');
+
+    let list = db.getData('yearlyLineups') as YearlyLineup[];
+    const itemToDelete = list.find(l => l.id === id);
+    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
+      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
+    }
+    list = list.filter(l => l.id !== id);
+    db.saveData('yearlyLineups', list);
   },
 
   // 통합 검색 기능

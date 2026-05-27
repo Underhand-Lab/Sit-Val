@@ -1,4 +1,4 @@
-import { Box, Div, vars, H3 } from '@shared/bridges/UIBridge';
+import { Div, vars, H3 } from '@shared/bridges/UIBridge';
 import React from 'react';
 import { RECalculationResult } from '../../league/api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
@@ -14,13 +14,13 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
   
   if (!data || !data[0] || !data[1]) {
     return (
-      <Box style={{ padding: '20px', textAlign: 'center' }}>
+      <Div style={{ padding: '20px', textAlign: 'center' }}>
         <H3 style={{ fontSize: '1em', marginBottom: '10px' }}>개인 확장 가치</H3>
         <p style={{ color: '#666', fontSize: '0.9em' }}>
           리그 데이터가 연결되지 않았습니다.<br/>
           [정보 설정]에서 리그를 연동하면 wRC+, wRAA 등을 계산할 수 있습니다.
         </p>
-      </Box>
+      </Div>
     );
   }
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
@@ -70,7 +70,7 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
 
   return (
     <Div className="result-personal" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <Box style={{ padding: '15px' }}>
+      <Div style={{ padding: '15px' }}>
         <H3 style={{ margin: '0 0 15px 0', fontSize: '1em' }}>개인 확장 가치</H3>
         <Div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', borderTop: `1px solid ${vars.surface}`, paddingTop: '10px' }}>
           <StatItem label="wOBA" value={personalWobaScaled.toFixed(3)} color="#e74c3c" />
@@ -83,7 +83,7 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
         <p style={{ fontSize: '0.85em', color: vars.text, marginTop: '10px' }}>
           ※ 해당 선수의 성적을 바탕으로 리그 환경 대비 가치를 산출한 결과입니다.
         </p>
-      </Box>
+      </Div>
     </Div>
   );
 };
