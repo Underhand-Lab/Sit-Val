@@ -9,7 +9,14 @@ import * as Calc from "@sit-val/lib/sabermetrics/calc";
 import { calculateRE } from '../features/league/api/re-league';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
 import { calculateBatterAbility } from '../common/api/stats';
-import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
+import PlayerPersonalVisualizer from '../features/player/components/PlayerPersonalVisualizer';
+import PlayerBasicVisualizer from '../features/player/components/PlayerBasicVisualizer';
+import { BasicStats } from '../types/BasicStats';
+
+const TOOL_OPTIONS = [
+  { name: '기본 타격 지표', Component: PlayerBasicVisualizer },
+  { name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
+];
 
 // 서브 페이지 임포트
 import PlayerSearchPage from './player/PlayerSearchPage';
@@ -36,26 +43,48 @@ const PlayerPage: React.FC = () => {
   const [playerYearlyStats, setPlayerYearlyStats] = useState<YearlyPlayer | null>(null);
   const [playerInfo, setPlayerInfo] = useState<Player | null>(null);
   const [leagueData, setLeagueData] = useState<YearlyLeague | null>(null);
+  const [yearlyLeagueId, setYearlyLeagueId] = useState<string>('');
   const [currentBatterStats, setCurrentBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS);
   const [selectedYear, setSelectedYear] = useState<number>(2024), [playerName, setPlayerName] = useState<string>('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [vizData, setVizData] = useState<any>(null);
-  const activeTools = useMemo(() => [{ id: 1, Component: PersonalVisualizer }], []);
+  const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+
+  const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
+    { id: '1', name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
+    { id: '2', name: '기본 타격 지표', Component: PlayerBasicVisualizer }
+  ]);
+
+  const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
+    setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
+    setIsToolMenuOpen(false);
+  };
+
+  const onRemoveTool = (id: string) => {
+    setActiveTools(prev => prev.filter(t => t.id !== id));
+  };
 
   useEffect(() => {
     const targetId = id === 'new' ? searchParams.get('from') : id;
     if (!id) return;
     const data = targetId ? db.getYearlyPlayerById(targetId) : null;
     if (data) {
-      setPlayerYearlyStats(data); setCurrentBatterStats(data.stats); setSelectedYear(data.year);
+      setPlayerYearlyStats(data); setCurrentBatterStats(data.stats); setSelectedYear(data.year); setYearlyLeagueId(data.yearlyLeagueId || '');
       const info = (db.getPlayers()).find(p => p.id === data.playerId) || { id: data.playerId, name: (data as any).name || '알 수 없음' };
       setPlayerInfo(info); setPlayerName(info.name);
-      setLeagueData(db.getYearlyLeagues('kbo').find(l => l.year === data.year) || null);
+      const linkedLeague = db.getData('yearlyLeagues').find(l => l.id === data.yearlyLeagueId);
+      setLeagueData(linkedLeague || null);
     } else if (id === 'new') {
       setPlayerInfo({ id: 'new', name: '신규 분석' }); setPlayerName('신규 분석');
     }
     setIsEditMode(id === 'new');
   }, [id, searchParams]);
+
+  // 연동 리그 ID가 변경될 때 leagueData를 동기화하여 저장 전에도 실시간 계산이 가능하게 합니다.
+  useEffect(() => {
+    const linkedLeague = db.getData('yearlyLeagues').find(l => l.id === yearlyLeagueId);
+    setLeagueData(linkedLeague || null);
+  }, [yearlyLeagueId]);
 
   // RE 계산 로직은 공통으로 사용하므로 Entry에서 관리
   const execute = useCallback(() => {
@@ -79,16 +108,29 @@ const PlayerPage: React.FC = () => {
       playerName={playerName} setPlayerName={setPlayerName}
       selectedYear={selectedYear} setSelectedYear={setSelectedYear}
       currentBatterStats={currentBatterStats} setCurrentBatterStats={setCurrentBatterStats}
+      yearlyLeagueId={yearlyLeagueId} setYearlyLeagueId={setYearlyLeagueId}
+      activeTools={activeTools}
+      onRemoveTool={onRemoveTool}
+      vizData={vizData}
+      isToolMenuOpen={isToolMenuOpen}
+      setIsToolMenuOpen={setIsToolMenuOpen}
+      addTool={addTool}
+      toolOptions={TOOL_OPTIONS}
     />
   ) : (
     <PlayerInfoPage 
       id={id}
       playerName={playerName}
-      playerInfo={playerInfo}
+      playerInfo={playerYearlyStats}
       selectedYear={selectedYear}
       leagueData={leagueData}
       activeTools={activeTools}
       vizData={vizData}
+      onRemoveTool={onRemoveTool}
+      isToolMenuOpen={isToolMenuOpen}
+      setIsToolMenuOpen={setIsToolMenuOpen}
+      addTool={addTool}
+      toolOptions={TOOL_OPTIONS}
     />
   );
 };

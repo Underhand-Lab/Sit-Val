@@ -5,14 +5,14 @@ import { db } from '../../services/db';
 import { DataManagementView } from '../../common/components/DataManagementView';
 
 const PlayerSearchPage: React.FC = () => {
-  const navigate = useNavigate();
-  return (
-    <DataManagementView 
-      title="선수" 
-      items={db.getData('yearlyPlayers')} 
-      createPath="/player/new" 
-      renderItem={(p) => <Button onClick={() => navigate(`/player/${p.id}`)}>{p.year} ID:{p.id}</Button>} 
-    />
-  );
+	const navigate = useNavigate();
+	return (
+		<DataManagementView
+			title="선수"
+			items={db.getData('yearlyPlayers')}
+			createPath="/player/new"
+			renderItem={(p) => <Button onClick={() => navigate(`/player/${p.id}`)}>{p.year} {p.name}</Button>}
+		/>
+	);
 };
 export default PlayerSearchPage;

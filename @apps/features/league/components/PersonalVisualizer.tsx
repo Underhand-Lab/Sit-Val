@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
-import { Box, Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
+import { Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { RECalculationResult } from '../api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
@@ -70,7 +70,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
     <Div className="result-personal">
       <H3 style={{ margin: '0 0 10px 0' }}>개인 타격 가치</H3>
       <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px'}}>
-        <Box>
+        <Div>
           <Div style={{ padding: '10px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
             <Div style={{ flex: 1 }}>
               <span style={{ fontSize: '0.85em', display: 'block', marginBottom: '5px' }}>가중 출루율 (wOBA)</span>
@@ -86,9 +86,9 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
               </Div>
             </Div>
           </Div>
-        </Box>
+        </Div>
 
-        <Box>
+        <Div>
           <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', }}>
             <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em' }}>wRAA (표준)</span>
@@ -115,7 +115,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
               </Div>
             </Div>
           </Div>
-        </Box>
+        </Div>
       </Div>
 
       <Button className="neumorphism-Button" onClick={() => setIsBatterOpen(true)}>

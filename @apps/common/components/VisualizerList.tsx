@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from
 import { Div, Button, vars } from '@shared/bridges/UIBridge';
 
 interface VisualizerListProps {
-  tools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
+  tools: Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
   data: any;
   onRemove: (id: string) => void;
-  toolOptions?: Array<{ name: string, Component: React.ComponentType<any> }>;
-  onAddTool?: (option: { name: string, Component: React.ComponentType<any> }) => void;
+  toolOptions?: Array<{ name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
+  onAddTool?: (option: { name: string, Component: React.ComponentType<any>, props?: Record<string, any> }) => void;
 }
 
 export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data, onRemove, toolOptions, onAddTool }) => {
@@ -15,8 +15,6 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
     (Array.isArray(tools) && tools.length > 0) ? tools[0].id : null
   );
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
-  const [showLeftScroll, setShowLeftScroll] = useState(false);
-  const [showRightScroll, setShowRightScroll] = useState(false);
   const addMenuRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null); // 탭 목록 스크롤을 위한 ref
   // 이전 도구 목록의 길이를 추적하여 도구가 새로 추가되었는지 확인합니다.
@@ -67,26 +65,6 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
     }
   }, [activeTabId]);
 
-  // 스크롤 버튼 가시성 체크
-  const checkScrollButtons = useCallback(() => {
-    if (scrollRef.current) {
-      const { scrollWidth, clientWidth, scrollLeft } = scrollRef.current;
-      setShowLeftScroll(scrollLeft > 0);
-      setShowRightScroll(scrollLeft + clientWidth < scrollWidth);
-    }
-  }, []);
-
-  // 레이아웃 측정은 브라우저 페인트 직전에 수행하여 안정성 확보
-  useLayoutEffect(() => {
-    const timeoutId = setTimeout(checkScrollButtons, 0);
-    const handleResize = () => checkScrollButtons();
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(timeoutId);
-    };
-  }, [tools, checkScrollButtons]);
-
   // 탭 스크롤 함수
   const scrollTabs = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
@@ -115,30 +93,8 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
         borderColor: vars.surface,
         alignItems: 'center',
       }}>
-        {/* 왼쪽 스크롤 버튼 */}
-        {showLeftScroll && (
-          <Button
-            onClick={() => scrollTabs('left')}
-            noHover
-            style={{
-              padding: '10px 10px',
-              background: 'transparent',
-              border: 'none',
-              boxShadow: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: vars.text,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0, // 버튼이 줄어들지 않도록
-            }}
-          >
-            {'<'}
-          </Button>
-        )}
         {/* 탭 목록: 실제 스크롤이 발생하는 영역 */}
-        <Div ref={scrollRef} onScroll={checkScrollButtons} style={{
+        <Div ref={scrollRef} style={{
           display: 'flex',
           flexDirection: 'row',
           overflowX: 'auto',
@@ -152,7 +108,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
               data-tab-id={tool.id}
               onClick={() => setActiveTabId(tool.id)}
               style={{
-                padding: '5px 20px',
+                padding: '5px 5px 5px 20px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -179,9 +135,8 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
                   background: 'transparent',
                   boxShadow: 'none',
                   border: 'none',
-                color: vars.text,
+                  color: vars.text,
                   cursor: 'pointer',
-                  borderRadius: '4px'
                 }}
               >
                 ✕
@@ -251,28 +206,6 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
             )}
           </Div>
         )}
-        {/* 오른쪽 스크롤 버튼 */}
-        {showRightScroll && (
-          <Button
-            onClick={() => scrollTabs('right')}
-            noHover
-            style={{
-              padding: '10px 10px',
-              background: 'transparent',
-              border: 'none',
-              boxShadow: 'none',
-              fontSize: '18px',
-              cursor: 'pointer',
-              color: vars.text,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0, // 버튼이 줄어들지 않도록
-            }}
-          >
-            {'>'}
-          </Button>
-        )}
       </Div>
 
       {/* 컨텐츠 표시 영역 */}
@@ -298,14 +231,14 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
             return ActiveComponent;
           }
 
-          // 3. 컴포넌트 타입(함수, 클래스, 또는 memo/forwardRef 객체)인 경우 태그로 렌더링
+          // 3. 컴포넌트 타입(함수, 클래스, 또는 memo/forwardRef 객체)인 경우 태그로 렌더링, props 전달
           const isComponentType = 
             type === 'function' || 
             type === 'string' || 
             (type === 'object' && ActiveComponent !== null && ActiveComponent.$$typeof);
 
           if (isComponentType) {
-            return <ActiveComponent data={data} />;
+            return <ActiveComponent data={data} {...(activeTool.props || {})} />;
           }
 
           // 4. 예외 상황 처리

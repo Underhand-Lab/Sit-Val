@@ -5,28 +5,29 @@ import { Div } from '@shared/bridges/UIBridge';
 import { calculateLineupRE, LineupCalculationResult } from '../features/lineup/api/re-line-up';
 import { RunnerStats } from '@sit-val/types/RunnerStats'
 import LeadoffVisualizer from '../features/lineup/components/LeadoffVisualizer'
-import Lineup9RE from '../features/lineup/components/Lineup9RE'
+// import Lineup9RE from '../features/lineup/components/Lineup9RE' // Removed as per request
 import LineupRE24 from '../features/lineup/components/LineupRE24'
 import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
 
 import { db } from '../services/db';
-import { YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
+import { YearlyPlayer } from '@packages/sit-val/types/Database';
 import { calculateBatterAbility } from '../common/api/stats';
-
-// 서브 페이지 임포트
+import { calculateBasicStats } from '../common/api/baseball';
+import { BasicStats } from '../types/BasicStats';
 import LineupSearchPage from './lineup/LineupSearchPage';
 import LineupInfoPage from './lineup/LineupInfoPage';
 import LineupEditPage from './lineup/LineupEditPage';
+import LineupVisualizer from '../features/lineup/components/LineupVisualizer';
 
 export interface LineupPlayerDisplay extends YearlyPlayer {
 	name: string;
 }
 
 const TOOL_OPTIONS = [
+	{ name: '라인업 정보', Component: LineupVisualizer },
 	{ name: '선두타자 분석', Component: LeadoffVisualizer },
-	{ name: '팀 기대 득점', Component: Lineup9RE },
-	{ name: '팀 RE24', Component: LineupRE24 },
-	{ name: '빅이닝 확률', Component: LineupBigInningVisualizer }
+	{ name: '팀 RE24', Component: LineupRE24 }, // Keeping RE24 separate
+	{ name: '득점 확률', Component: LineupBigInningVisualizer },
 ];
 
 const INITIAL_RUNNER_STATS: RunnerStats = {
@@ -42,18 +43,17 @@ const NewLineupPage: React.FC = () => {
 	const { id } = useParams();
 	const [searchParams] = useSearchParams();
 
-	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any> }>>([
-		{ id: '1', name: '팀 기대 득점', Component: Lineup9RE }, 
-		{ id: '2', name: '팀 RE24', Component: LineupRE24 },
+	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
+		{ id: '1', name: '라인업 정보', Component: LineupVisualizer },
+		{ id: '2', name: '팀 RE24', Component: LineupRE24 }, // Keeping RE24 separate
 	]);
-	const [vizData, setVizData] = useState<[LineupCalculationResult] | null>(null);
+	const [vizData, setVizData] = useState<[LineupCalculationResult, BasicStats] | null>(null);
 
 	const [availablePlayers, setAvailablePlayers] = useState<LineupPlayerDisplay[]>([]);
 	const [currentLineupPlayers, setCurrentLineupPlayers] = useState<LineupPlayerDisplay[]>([]);
 	const [lineupOrder, setLineupOrder] = useState<string[]>([]);
 	const [lineupName, setLineupName] = useState<string>('새 라인업');
 	const [selectedYear, setSelectedYear] = useState<number>(2024);
-	const [leagueData, setLeagueData] = useState<YearlyLeague | null>(null);
 
 	const [isEditMode, setIsEditMode] = useState(false);
 	const [lineupRunnerStats, setLineupRunnerStats] = useState<RunnerStats>(INITIAL_RUNNER_STATS);
@@ -61,8 +61,8 @@ const NewLineupPage: React.FC = () => {
 
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-	const addTool = (option: { name: string, Component: React.ComponentType<any> }) => {
-		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component }]);
+	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
+		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
 		setIsToolMenuOpen(false);
 	};
 
@@ -72,8 +72,26 @@ const NewLineupPage: React.FC = () => {
 
 	const execute = useCallback(() => {
 		if (lineupOrder.length === 9) {
-			const abilities = lineupOrder.map(id => calculateBatterAbility(currentLineupPlayers.find(p => p.id === id)!.stats));
-			setVizData([calculateLineupRE(abilities, lineupRunnerStats)]);
+			const playerStatsList = lineupOrder.map(id => currentLineupPlayers.find(p => p.id === id)!.stats);
+			const abilities = playerStatsList.map(stats => calculateBatterAbility(stats));
+
+			const teamStats = playerStatsList.reduce((acc, s) => ({
+				'1B': acc['1B'] + (s['1B'] || 0),
+				'2B': acc['2B'] + (s['2B'] || 0),
+				'3B': acc['3B'] + (s['3B'] || 0),
+				hr: acc.hr + (s.hr || 0),
+				bb: acc.bb + (s.bb || 0),
+				so: acc.so + (s.so || 0),
+				go: acc.go + (s.go || 0),
+				fo: acc.fo + (s.fo || 0),
+				sf: acc.sf + (s.sf || 0),
+				sh: acc.sh + (s.sh || 0),
+				hbp: acc.hbp + (s.hbp || 0),
+				pa: acc.pa + (s.pa || 0),
+			}), { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0 });
+
+			const basic = calculateBasicStats(teamStats);
+			setVizData([calculateLineupRE(abilities, lineupRunnerStats), basic]);
 		} else setVizData(null);
 	}, [currentLineupPlayers, lineupOrder, lineupRunnerStats]);
 
@@ -87,14 +105,8 @@ const NewLineupPage: React.FC = () => {
 
 	useEffect(() => { execute(); }, [execute]);
 	useEffect(() => {
-		const fetchPlayersAndLeague = async () => {
-			const playersWithStats = db.getPlayersWithYearlyStats(selectedYear);
-			setAvailablePlayers(playersWithStats);
-			const fetchedLeagueData = db.getYearlyLeagues('kbo').find(l => l.year === selectedYear);
-			if (fetchedLeagueData) setLeagueData(fetchedLeagueData);
-			else setLeagueData(null);
-		};
-		fetchPlayersAndLeague();
+		const playersWithStats = db.getPlayersWithYearlyStats(selectedYear);
+		setAvailablePlayers(playersWithStats);
 	}, [selectedYear]);
 
 	useEffect(() => {

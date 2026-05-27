@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Div, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
+import { Box, Div, Button, FixedFooter, BottomSheet, InputNumber } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../common/components/VisualizerList';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
@@ -170,15 +170,15 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 
 			<BottomSheet isOpen={isMetaOpen} onClose={() => setIsMetaOpen(false)} title={`${lineupName} 정보 설정`}>
 				<Div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-					<Div>
-						<label style={{ display: 'block', marginBottom: '5px' }}>라인업 이름</label>
-						<input type="text" value={lineupName} onChange={(e) => setLineupName(e.target.value)} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }} />
+					<Div style={{display: "flex", flexDirection: 'row', gap: "10px", alignItems: 'center'}}>
+						<label style={{ display: 'block', marginBottom: '5px', minWidth: '100px' }}>라인업 이름</label>
+						<InputNumber type="text" value={lineupName} onChange={(e) => setLineupName(e.target.value)} />
 					</Div>
-					<Div>
-						<label style={{ display: 'block', marginBottom: '5px' }}>연도</label>
-						<input type="number" value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} style={{ width: '100%', padding: '10px', border: '1px solid #ccc', borderRadius: '4px' }} />
+					<Div style={{display: "flex", flexDirection: 'row', gap: "10px", alignItems: 'center'}}>
+						<label style={{ display: 'block', marginBottom: '5px', minWidth: '100px' }}>연도</label>
+						<InputNumber value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} />
 					</Div>
-					<Button onClick={() => setIsMetaOpen(false)} disabled={!isMetaValid} style={{ marginTop: '10px', backgroundColor: isMetaValid ? undefined : '#ccc', cursor: isMetaValid ? 'pointer' : 'not-allowed' }}>확인</Button>
+					<Button onClick={() => setIsMetaOpen(false)} disabled={!isMetaValid} style={{ marginTop: '15px', width: '100%', backgroundColor: isMetaValid ? undefined : '#ccc', cursor: isMetaValid ? 'pointer' : 'not-allowed' }}>확인</Button>
 				</Div>
 			</BottomSheet>
 

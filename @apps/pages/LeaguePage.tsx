@@ -4,31 +4,35 @@ import { Div } from '@shared/bridges/UIBridge';
 import * as TransitionEngine from '@sit-val/lib/transition-engine/'
 import * as Calc from "@sit-val/lib/sabermetrics/calc";
 import { db } from '../services/db';
-import { calculateRE } from '../features/league/api/re-league';
+import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
-import Visualizer9RE from '../features/league/components/Visualizer9RE';
-import RE24Visualizer from '../features/league/components/RE24Visualizer';
+
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
 import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
+
 import { ExtendedBatterStats } from '../types/Database';
 import { calculateBatterAbility } from '../common/api/stats';
+import { calculateBasicStats } from '../common/api/baseball';
+import { BasicStats } from '../types/BasicStats';
 
 // 서브 페이지 임포트
 import LeagueSearchPage from './league/LeagueSearchPage';
 import LeagueInfoPage from './league/LeagueInfoPage';
 import LeagueEditPage from './league/LeagueEditPage';
+import RE24Visualizer from '@apps/features/league/components/RE24Visualizer';
+import LeagueBigInningVisualizer from '@apps/features/league/components/LeagueBigInningVisualizer';
 
 const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0, pa: 596 };
 const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
 
 const TOOL_OPTIONS = [
-	{ name: 'Visualizer 9RE', Component: Visualizer9RE },
-	{ name: 'RE24 Visualizer', Component: RE24Visualizer },
-	{ name: 'League Visualizer', Component: LeagueVisualizer },
-	{ name: 'Run Value Visualizer', Component: RunValueVisualizer },
-	{ name: 'Personal Visualizer', Component: PersonalVisualizer },
+	{ name: '리그 정보', Component: LeagueVisualizer },
+	{ name: 'RE24', Component: RE24Visualizer },
+	{ name: '득점 확률', Component: LeagueBigInningVisualizer },
+	{ name: '타구 가치', Component: RunValueVisualizer },
+	{ name: '개인 가치', Component: PersonalVisualizer },
 ];
 
 function LeaguePage() {
@@ -38,13 +42,11 @@ function LeaguePage() {
 	const [isEditMode, setIsEditMode] = useState(false), [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS), [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number>(2024), [leagueIdInput, setLeagueIdInput] = useState<string>('kbo');
-	const [vizData, setVizData] = useState<any>(null);
-	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any> }>>([
-		{ id: '1', name: 'Visualizer 9RE', Component: Visualizer9RE }, 
-		{ id: '2', name: 'RE24 Visualizer', Component: RE24Visualizer }, 
-		{ id: '3', name: 'League Visualizer', Component: LeagueVisualizer }, 
-		{ id: '4', name: 'Run Value Visualizer', Component: RunValueVisualizer }, 
-		{ id: '5', name: 'Personal Visualizer', Component: PersonalVisualizer }
+	const [vizData, setVizData] = useState<[RECalculationResult, Calc.WOBAWeights, number, number, number, BasicStats] | null>(null);
+	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>>([
+		{ id: '1', name: '리그 정보', Component: LeagueVisualizer },
+		{ id: '2', name: '타구 가치', Component: RunValueVisualizer }, 
+		{ id: '3', name: '개인 가치', Component: PersonalVisualizer }
 	]);
 
 	useEffect(() => {
@@ -56,8 +58,8 @@ function LeaguePage() {
 		setIsEditMode(id === 'new');
 	}, [id, searchParams]);
 
-	const addTool = (option: { name: string, Component: React.ComponentType<any> }) => {
-		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component }]);
+	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
+		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
 		setIsToolMenuOpen(false);
 	};
 
@@ -67,9 +69,10 @@ function LeaguePage() {
 
 	const execute = useCallback(() => {
 		const stats = calculateBatterAbility(leagueBatterStats);
+		const basic = calculateBasicStats(leagueBatterStats);
 		const ret = calculateRE(stats, leagueRunnerStats, transitionEngine);
 		const weights = Calc.calculateWeightedRunValue({ ...leagueBatterStats, pa: stats.pa }, ret['runValue']); const lgWobaRaw = Calc.calculateCustomWOBA(weights, { ...leagueBatterStats, pa: stats.pa });
-		setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], { ...leagueBatterStats, pa: stats.pa })]);
+		setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], { ...leagueBatterStats, pa: stats.pa }), basic]);
 	}, [leagueBatterStats, leagueRunnerStats, transitionEngine]);
 
 	const handleSave = useCallback(() => {

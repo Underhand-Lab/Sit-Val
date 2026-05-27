@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Div, Button, H3 } from '@shared/bridges/UIBridge';
+import { Box, Div, Button, H3, vars } from '@shared/bridges/UIBridge';
 import { useNavigate } from 'react-router-dom';
 
 interface Props<T> {
@@ -16,8 +16,17 @@ export const DataManagementView = <T extends { id: string }>({ title, items, cre
       <Box>
         <H3>{title} 관리</H3>
         <Div style={{ display: 'flex', flexDirection: 'row', gap: '10px', padding: '10px'}}>
-            <input type="text" placeholder="검색..." style={{ flex: 1, padding: '10px', boxSizing: 'border-box', border: '1px solid #ddd', borderRadius: '4px' }} />
-            <Button onClick={() => navigate(createPath)} style={{ backgroundColor: '#2196F3', color: 'white', boxSizing: 'border-box' }}>새로 생성</Button>
+            <input type="text" placeholder="검색..."
+            style={{ flex: 1,
+              padding: '10px',
+              boxSizing: 'border-box',
+              border: `1px solid ${vars.surface}`,
+              borderRadius: '10px',
+              fontFamily: vars.font,
+              color: vars.text,
+              backgroundColor: vars.background
+              }} />
+            <Button onClick={() => navigate(createPath)} style={{ color: 'white', boxSizing: 'border-box' }}>새로 생성</Button>
         </Div>
       </Box>
       <Box>

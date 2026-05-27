@@ -43,8 +43,10 @@ export interface Player {
 export interface YearlyPlayer {
   id: string;
   playerId: string;
+  name?: string;
   yearlyTeamIds: string[]; // 이적 고려(여러 팀 가능)
   year: number;
+  yearlyLeagueId?: string; // 연동된 리그 ID
   stats: ExtendedBatterStats;
   creatorId: string; // 작성자 ID 추가
 }

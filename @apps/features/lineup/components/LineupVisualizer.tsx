@@ -1,22 +1,17 @@
 import { Div, vars, H3 } from '@shared/bridges/UIBridge';
 import React from 'react';
-import { RECalculationResult } from '../api/re-league';
-import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
+import { LineupCalculationResult } from '../api/re-line-up';
 import { BasicStats } from '../../../types/BasicStats';
 
-interface LeagueVisualizerProps {
-  data: [RECalculationResult, WOBAWeights, number, number, number, BasicStats] | null;
+interface LineupVisualizerProps {
+  data: [LineupCalculationResult, BasicStats] | null;
 }
 
-const LeagueVisualizer: React.FC<LeagueVisualizerProps> = ({ data }) => {
+const LineupVisualizer: React.FC<LineupVisualizerProps> = ({ data }) => {
   if (!data) return null;
-  const [ret, , , wOBAScale, runPerPa, basic] = data;
+  const [ret, basic] = data;
 
-  const customRunPerPa = ret['R_PA_Custom'];
-
-  // League의 경우 R[0][0] * 9
-  const R = ret['R'] as any;
-  const expectedRuns = R ? ((Array.isArray(R[0]) ? R[0][0] : R[0]) * 9).toFixed(3) : '0.000';
+  const expectedRuns = ret.total_re ? ret.total_re.toFixed(3) : '0.000';
 
   const StatItem = ({ label, value, color }: { label: string; value: string | number; color?: string }) => (
     <Div style={{ textAlign: 'center', padding: '10px' }}>
@@ -28,7 +23,7 @@ const LeagueVisualizer: React.FC<LeagueVisualizerProps> = ({ data }) => {
   return (
     <Div className="result-visualizer" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <Div style={{ padding: '20px', textAlign: 'center' }}>
-        <span style={{ fontSize: '0.9em', color: '#666' }}>9이닝당 리그 기대 득점</span>
+        <span style={{ fontSize: '0.9em', color: '#666' }}>9이닝당 팀 기대 득점</span>
         <Div style={{ fontSize: '2.4em', fontWeight: 'bold', color: '#e74c3c', marginTop: '5px' }}>
           {expectedRuns}
         </Div>
@@ -56,28 +51,8 @@ const LeagueVisualizer: React.FC<LeagueVisualizerProps> = ({ data }) => {
           </Div>
         </Div>
       )}
-
-      <Div style={{ padding: '15px' }}>
-        <H3 style={{ margin: '0 0 15px 0', fontSize: '1em' }}>리그 확장 가치</H3>
-        <Div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '10px', 
-          borderTop: `1px solid ${vars.surface}`, 
-          paddingTop: '10px' 
-        }}>
-          <StatItem label="wOBA Scale" value={wOBAScale.toFixed(3)} />
-          <StatItem label="R/PA" value={runPerPa.toFixed(3)} />
-            <StatItem 
-              label="R/PA (Custom)" 
-              value={customRunPerPa !== undefined ? 
-                (Array.isArray(customRunPerPa) ? customRunPerPa[0] : customRunPerPa).toFixed(3) 
-                : '0.000'} 
-            />
-        </Div>
-      </Div>
     </Div>
   );
 };
 
-export default LeagueVisualizer;
+export default LineupVisualizer;

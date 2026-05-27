@@ -11,7 +11,7 @@ const LineupSearchPage: React.FC = () => {
 			title="라인업"
 			items={db.getData('yearlyLineups')}
 			createPath="/lineup/new"
-			renderItem={(l) => <Button onClick={() => navigate(`/lineup/${l.id}`)}>{l.name} ({l.year})</Button>}
+			renderItem={(l) => <Button onClick={() => navigate(`/lineup/${l.id}`)}>{l.year} {l.name}</Button>}
 		/>
 	);
 };
