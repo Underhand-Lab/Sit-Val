@@ -61,9 +61,21 @@ export const db = {
   },
 
   // 저장 또는 업데이트 (소유권 확인)
-  saveYearlyPlayer: (data: Omit<YearlyPlayer, 'creatorId'>) => {
+  saveYearlyPlayer: (data: Omit<YearlyPlayer, 'creatorId'> & { name?: string }) => {
     const user = db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
+
+    // 마스터 선수 정보 업데이트 (이름 유실 방지)
+    if (data.name) {
+      const players = db.getData('players') as Player[];
+      const pIdx = players.findIndex(p => p.id === data.playerId);
+      if (pIdx !== -1) {
+        players[pIdx].name = data.name;
+      } else {
+        players.push({ id: data.playerId, name: data.name });
+      }
+      db.saveData('players', players);
+    }
 
     const list = db.getData('yearlyPlayers') as YearlyPlayer[];
     const existingIndex = list.findIndex(p => p.id === data.id);
