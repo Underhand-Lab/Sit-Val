@@ -9,13 +9,13 @@ interface LineupInfoPageProps {
 	id: string;
 	lineupName: string;
 	selectedYear: number;
-	activeTools: Array<{ id: number, Component: React.ComponentType<any> }>;
+	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
 	vizData: any;
 	isToolMenuOpen: boolean;
 	setIsToolMenuOpen: (val: boolean) => void;
-	addTool: (Component: React.ComponentType<any>) => void;
+	addTool: (option: { name: string, Component: React.ComponentType<any> }) => void;
 	toolOptions: Array<{ name: string, Component: React.ComponentType<any> }>;
-	onRemoveTool: (id: number) => void;
+	onRemoveTool: (id: string) => void;
 }
 
 const LineupInfoPage: React.FC<LineupInfoPageProps> = ({
@@ -31,20 +31,18 @@ const LineupInfoPage: React.FC<LineupInfoPageProps> = ({
 				onEditToggle={() => navigate(`/lineup/new?from=${id}`)}
 				onSave={() => { }}
 				showSave={false}
+			/> 
+			<VisualizerList 
+				tools={activeTools} 
+				data={vizData} 
+				onRemove={onRemoveTool} 
+				toolOptions={toolOptions}
+				onAddTool={addTool}
 			/>
-			<VisualizerList tools={activeTools} data={vizData} onRemove={onRemoveTool} />
-			<Popup isOpen={isToolMenuOpen} onClose={() => setIsToolMenuOpen(false)} title="분석 도구 추가">
-				<Div className="tool-grid">
-					{toolOptions.map(option => (
-						<Button key={option.name} onClick={() => addTool(option.Component)}>{option.name}</Button>
-					))}
-				</Div>
-			</Popup>
 			<FixedFooter>
 				<Box className="container">
 					<Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
 						<Button onClick={() => navigate('/lineup')}>목록</Button>
-						<Button onClick={() => setIsToolMenuOpen(true)}>도구 추가</Button>
 					</Div>
 				</Box>
 			</FixedFooter>

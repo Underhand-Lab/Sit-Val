@@ -38,7 +38,14 @@ function LeaguePage() {
 	const [isEditMode, setIsEditMode] = useState(false), [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS), [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number>(2024), [leagueIdInput, setLeagueIdInput] = useState<string>('kbo');
-	const [vizData, setVizData] = useState<any>(null), [activeTools, setActiveTools] = useState<any[]>([{ id: 1, Component: Visualizer9RE }, { id: 2, Component: RE24Visualizer }, { id: 3, Component: LeagueVisualizer }, { id: 4, Component: RunValueVisualizer }, { id: 5, Component: PersonalVisualizer }]);
+	const [vizData, setVizData] = useState<any>(null);
+	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any> }>>([
+		{ id: '1', name: 'Visualizer 9RE', Component: Visualizer9RE }, 
+		{ id: '2', name: 'RE24 Visualizer', Component: RE24Visualizer }, 
+		{ id: '3', name: 'League Visualizer', Component: LeagueVisualizer }, 
+		{ id: '4', name: 'Run Value Visualizer', Component: RunValueVisualizer }, 
+		{ id: '5', name: 'Personal Visualizer', Component: PersonalVisualizer }
+	]);
 
 	useEffect(() => {
 		const targetId = id === 'new' ? searchParams.get('from') : id;
@@ -49,9 +56,13 @@ function LeaguePage() {
 		setIsEditMode(id === 'new');
 	}, [id, searchParams]);
 
-	const addTool = (Component: React.ComponentType<any>) => {
-		setActiveTools(prev => [...prev, { id: Date.now(), Component }]);
+	const addTool = (option: { name: string, Component: React.ComponentType<any> }) => {
+		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component }]);
 		setIsToolMenuOpen(false);
+	};
+
+	const onRemoveTool = (id: string) => {
+		setActiveTools(prev => prev.filter(t => t.id !== id));
 	};
 
 	const execute = useCallback(() => {
@@ -85,7 +96,7 @@ function LeaguePage() {
 			handleSave={handleSave}
 			isMetaValid={isMetaValid}
 			activeTools={activeTools}
-			onRemoveTool={(id: number) => setActiveTools(prev => prev.filter(t => t.id !== id))}
+			onRemoveTool={onRemoveTool}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}
@@ -96,7 +107,7 @@ function LeaguePage() {
 			leagueIdInput={leagueIdInput}
 			selectedYear={selectedYear}
 			activeTools={activeTools}
-			onRemoveTool={(id: number) => setActiveTools(prev => prev.filter(t => t.id !== id))}
+			onRemoveTool={onRemoveTool}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}

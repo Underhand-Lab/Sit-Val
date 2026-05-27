@@ -4,7 +4,7 @@ import { Div } from '@shared/bridges/UIBridge';
 
 import { calculateLineupRE, LineupCalculationResult } from '../features/lineup/api/re-line-up';
 import { RunnerStats } from '@sit-val/types/RunnerStats'
-import LeadoffVisualizer from '../features/league/components/LeadoffVisualizer'
+import LeadoffVisualizer from '../features/lineup/components/LeadoffVisualizer'
 import Lineup9RE from '../features/lineup/components/Lineup9RE'
 import LineupRE24 from '../features/lineup/components/LineupRE24'
 import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
@@ -42,8 +42,9 @@ const NewLineupPage: React.FC = () => {
 	const { id } = useParams();
 	const [searchParams] = useSearchParams();
 
-	const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
-		{ id: 1, Component: Lineup9RE }, { id: 2, Component: LineupRE24 },
+	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any> }>>([
+		{ id: '1', name: '팀 기대 득점', Component: Lineup9RE }, 
+		{ id: '2', name: '팀 RE24', Component: LineupRE24 },
 	]);
 	const [vizData, setVizData] = useState<[LineupCalculationResult] | null>(null);
 
@@ -60,9 +61,13 @@ const NewLineupPage: React.FC = () => {
 
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-	const addTool = (Component: React.ComponentType<any>) => {
-		setActiveTools(prev => [...prev, { id: Date.now(), Component }]);
+	const addTool = (option: { name: string, Component: React.ComponentType<any> }) => {
+		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component }]);
 		setIsToolMenuOpen(false);
+	};
+
+	const onRemoveTool = (id: string) => {
+		setActiveTools(prev => prev.filter(t => t.id !== id));
 	};
 
 	const execute = useCallback(() => {
@@ -130,6 +135,9 @@ const NewLineupPage: React.FC = () => {
 			currentLineupPlayers={currentLineupPlayers} setCurrentLineupPlayers={setCurrentLineupPlayers}
 			lineupOrder={lineupOrder} setLineupOrder={setLineupOrder}
 			lineupRunnerStats={lineupRunnerStats} setLineupRunnerStats={setLineupRunnerStats}
+			activeTools={activeTools}
+			onRemoveTool={onRemoveTool}
+			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}
 		/>
@@ -144,7 +152,7 @@ const NewLineupPage: React.FC = () => {
 			setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool}
 			toolOptions={TOOL_OPTIONS}
-			onRemoveTool={(id: number) => setActiveTools(prev => prev.filter(t => t.id !== id))}
+			onRemoveTool={onRemoveTool}
 		/>
 	);
 };

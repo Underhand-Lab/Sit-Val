@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Box, Div, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
+import { VisualizerList } from '../../common/components/VisualizerList';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
 import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput';
 import { db } from '../../services/db';
@@ -11,7 +12,7 @@ import { YearlyPlayer, Player } from '@packages/sit-val/types/Database';
 import { LineupPlayerDisplay } from '../LineupPage';
 
 interface LineupEditPageProps {
-	id: string;
+	id: string; 
 	lineupName: string;
 	setLineupName: (val: string) => void;
 	selectedYear: number;
@@ -24,16 +25,20 @@ interface LineupEditPageProps {
 	setLineupOrder: React.Dispatch<React.SetStateAction<string[]>>;
 	lineupRunnerStats: RunnerStats;
 	setLineupRunnerStats: (val: RunnerStats) => void;
+	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
+	onRemoveTool: (id: string) => void;
+	vizData: any;
 	setIsToolMenuOpen: (val: boolean) => void;
 	isToolMenuOpen: boolean; // Add this line
-	addTool: (Component: React.ComponentType<any>) => void;
+	addTool: (option: { name: string, Component: React.ComponentType<any> }) => void;
 	toolOptions: Array<{ name: string, Component: React.ComponentType<any> }>;
 }
 
 const LineupEditPage: React.FC<LineupEditPageProps> = ({
 	id, lineupName, setLineupName, selectedYear, setSelectedYear, availablePlayers, setAvailablePlayers,
 	currentLineupPlayers, setCurrentLineupPlayers, lineupOrder, setLineupOrder,
-	lineupRunnerStats, setLineupRunnerStats, setIsToolMenuOpen
+	lineupRunnerStats, setLineupRunnerStats, isToolMenuOpen, setIsToolMenuOpen,
+	activeTools, onRemoveTool, vizData, addTool, toolOptions
 }) => {
 	const navigate = useNavigate();
 	const batterRef = useRef<BatterInputHandle>(null);
@@ -109,6 +114,14 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 				isSaveDisabled={!isMetaValid}
 			/>
 
+			<VisualizerList 
+				tools={activeTools} 
+				data={vizData} 
+				onRemove={onRemoveTool} 
+				toolOptions={toolOptions}
+				onAddTool={addTool}
+			/>
+
 			<BottomSheet isOpen={isPlayerListOpen} onClose={() => setPlayerListOpen(false)} title="선수 명단">
 				<Div style={{ flex: 1, overflowY: 'auto' }}>
 					{availablePlayers.length === 0 && <p>등록된 선수가 없습니다. 새 선수를 추가해주세요.</p>}
@@ -181,7 +194,6 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 						<Button onClick={() => setPlayerListOpen(true)}>선수 명단</Button>
 						<Button onClick={() => setLineupEditOpen(true)}>타순 설정</Button>
 						<Button onClick={() => setRunnerOpen(true)}>주자 설정</Button>
-						<Button onClick={() => setIsToolMenuOpen(true)}>도구 추가</Button>
 					</Div>
 				</Box>
 			</FixedFooter>

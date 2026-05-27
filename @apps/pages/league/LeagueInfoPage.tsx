@@ -9,17 +9,17 @@ interface LeagueInfoPageProps {
 	id: string;
 	leagueIdInput: string;
 	selectedYear: number;
-	activeTools: any[];
-	onRemoveTool: (id: number) => void;
+	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
+	onRemoveTool: (id: string) => void;
 	vizData: any;
 	isToolMenuOpen: boolean;
 	setIsToolMenuOpen: (val: boolean) => void;
-	addTool: (Component: React.ComponentType<any>) => void;
+	addTool: (option: { name: string, Component: React.ComponentType<any> }) => void;
 	toolOptions: Array<{ name: string, Component: React.ComponentType<any> }>;
 }
 
 const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
-	id, leagueIdInput, selectedYear, activeTools, onRemoveTool, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions
+	id, leagueIdInput, selectedYear, activeTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions, onRemoveTool
 }) => {
 	const navigate = useNavigate();
 	return (
@@ -33,20 +33,17 @@ const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
 				showSave={false}
 			/>
 
-			<VisualizerList tools={activeTools} data={vizData} onRemove={onRemoveTool} />
-
-			<Popup isOpen={isToolMenuOpen} onClose={() => setIsToolMenuOpen(false)} title="분석 도구 추가">
-				<Div className="tool-grid">
-					{toolOptions.map(option => (
-						<Button key={option.name} onClick={() => addTool(option.Component)}>{option.name}</Button>
-					))}
-				</Div>
-			</Popup>
+			<VisualizerList 
+				tools={activeTools} 
+				data={vizData} 
+				onRemove={onRemoveTool} 
+				toolOptions={toolOptions}
+				onAddTool={addTool}
+			/>
 
 			<FixedFooter>
 				<Div style={{ display: 'flex', gap: '10px', padding: '10px', justifyContent: 'center' }}>
 					<Button onClick={() => navigate('/league')}>목록</Button>
-					<Button onClick={() => setIsToolMenuOpen(true)}>도구</Button>
 				</Div>
 			</FixedFooter>
 		</Div>
