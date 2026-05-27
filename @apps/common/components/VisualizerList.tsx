@@ -18,7 +18,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
   const addMenuRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null); // 탭 목록 스크롤을 위한 ref
   // 이전 도구 목록의 길이를 추적하여 도구가 새로 추가되었는지 확인합니다.
-  const prevToolsLengthRef = useRef(tools.length);
+  const prevToolsRef = useRef(tools); // 이전 tools 배열을 저장
 
   // 메뉴 외부 클릭 시 닫기 처리
   useEffect(() => {
@@ -33,25 +33,35 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
 
   // 도구 목록이 변경될 때 활성 탭 상태를 동기화합니다.
   useEffect(() => {
+    const prevTools = prevToolsRef.current;
+
     if (!tools || tools.length === 0) {
       if (activeTabId !== null) setActiveTabId(null);
-      prevToolsLengthRef.current = 0;
+      prevToolsRef.current = [];
       return;
     }
 
     // 1. 도구가 새로 추가된 경우 (목록의 길이가 늘어남)
-    if (tools.length > prevToolsLengthRef.current) {
+    if (tools.length > prevTools.length) {
       // 가장 최근에 추가된 도구(마지막 요소)를 활성화합니다.
       setActiveTabId(tools[tools.length - 1].id);
-    } else {
-      // 2. 기존 활성 탭이 삭제된 경우나 초기 상태인 경우 처리
+    } else if (tools.length < prevTools.length) {
+      // 2. 기존 활성 탭이 삭제된 경우 처리
       const currentExists = tools.some(t => t.id === activeTabId);
-      if (activeTabId === null || !currentExists) {
-        setActiveTabId(tools[0].id);
+      if (activeTabId !== null && !currentExists) {
+        // 활성 탭이 삭제됨. 이전 위치를 찾아 인접 탭 선택
+        const removedIndex = prevTools.findIndex(t => t.id === activeTabId);
+        // 삭제된 탭의 바로 왼쪽 탭 선택 (첫 번째 탭이었다면 새로운 0번인 오른쪽 탭 선택)
+        const nextIndex = Math.max(0, removedIndex - 1);
+        if (tools[nextIndex]) {
+          setActiveTabId(tools[nextIndex].id);
+        }
       }
+    } else if (activeTabId === null && tools.length > 0) {
+      setActiveTabId(tools[0].id);
     }
 
-    prevToolsLengthRef.current = tools.length;
+    prevToolsRef.current = tools;
   }, [tools, activeTabId]);
 
   // 활성 탭이 변경될 때 해당 탭 버튼을 가시 영역으로 스크롤합니다.
