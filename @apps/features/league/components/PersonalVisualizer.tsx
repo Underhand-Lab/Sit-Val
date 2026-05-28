@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
 import { Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RECalculationResult } from '../api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
 
@@ -22,16 +22,16 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   if (!data || !data[0] || !data[1]) return null;
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
-  // 컴포넌트 마운트 시 초기 데이터를 가져오는 로직 (필요한 경우)
-  // 이 로직은 sheet가 열려있을 때만 유효하므로 현재는 batterStats의 초기값 설정으로 대체되었습니다.
+  // 입력된 성적을 바탕으로 타석(PA) 등이 자동 계산되는 인스턴스 생성
+  const stats = useMemo(() => new BatterStats(batterStats), [batterStats]);
 
   const handleBatterChange = (newStats: BatterStatsData) => {
     setBatterStats(newStats);
   };
 
   const calculateWoba = () => {
-    if (!weights || !batterStats) return 0;
-    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = batterStats;
+    if (!weights || !stats) return 0;
+    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = stats;
     if (!pa) return 0;
     const numerator =
       (bb * (weights.bb || 0)) +
@@ -44,22 +44,22 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   };
 
   const calculateCustomWraa = () => {
-    if (!ret?.runValue || !batterStats) return 0;
+    if (!ret?.runValue || !stats) return 0;
     const rv = ret.runValue;
     const events = ['bb', 'hbp', '1B', '2B', '3B', 'hr', 'so', 'go', 'fo'];
     return events.reduce((acc, event) => {
-      return acc + (batterStats[event] || 0) * (rv[event]?.value || 0);
+      return acc + ((stats as any)[event] || 0) * (rv[event]?.value || 0);
     }, 0);
   };
 
   const personalWoba = calculateWoba();
   const personalWobaScaled = personalWoba * wOBAScale;
-  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (batterStats.pa || 0) : 0;
+  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (stats.pa || 0) : 0;
   const wraaCustom = calculateCustomWraa();
 
   const calculateWrcPlus = (currentWraa: number, currentRunPerPa: number) => {
-    if (!batterStats.pa || !currentRunPerPa) return 0;
-    return ((currentWraa / batterStats.pa) / currentRunPerPa + 1) * 100;
+    if (!stats.pa || !currentRunPerPa) return 0;
+    return ((currentWraa / stats.pa) / currentRunPerPa + 1) * 100;
   };
 
   const wrcPlus = calculateWrcPlus(wraa, runPerPa);

@@ -1,8 +1,8 @@
 import { Div, vars, H3 } from '@shared/bridges/UIBridge';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { RECalculationResult } from '../../league/api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 
 interface PlayerPersonalVisualizerProps {
   data: [RECalculationResult, WOBAWeights, number, number, number] | null;
@@ -12,6 +12,8 @@ interface PlayerPersonalVisualizerProps {
 const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ data, batterStats }) => {
   if (!batterStats) return null;
   
+  const stats = useMemo(() => new BatterStats(batterStats), [batterStats]);
+
   if (!data || !data[0] || !data[1]) {
     return (
       <Div style={{ padding: '20px', textAlign: 'center' }}>
@@ -26,7 +28,7 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
   const calculateWoba = () => {
-    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = batterStats;
+    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = stats;
     if (!pa) return 0;
     const numerator =
       (bb * (weights.bb || 0)) +
@@ -43,22 +45,22 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
     const rv = ret.runValue;
     const events = ['bb', 'hbp', '1B', '2B', '3B', 'hr', 'so', 'go', 'fo'];
     return events.reduce((acc, event) => {
-      return acc + (batterStats[event] || 0) * (rv[event]?.value || 0);
+      return acc + ((stats as any)[event] || 0) * (rv[event]?.value || 0);
     }, 0);
   };
 
   const personalWoba = calculateWoba();
   const personalWobaScaled = personalWoba * wOBAScale;
-  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (batterStats.pa || 0) : 0;
+  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (stats.pa || 0) : 0;
   const wraaCustom = calculateCustomWraa();
 
   const calculateWrcPlus = (currentWraa: number, currentRunPerPa: number) => {
-    if (!batterStats.pa || !currentRunPerPa) return 0;
-    return ((currentWraa / batterStats.pa) / currentRunPerPa + 1) * 100;
+    if (!stats.pa || !currentRunPerPa) return 0;
+    return ((currentWraa / stats.pa) / currentRunPerPa + 1) * 100;
   };
 
   const wrcPlus = calculateWrcPlus(wraa, runPerPa);
-  const customRunPerPa = Array.isArray(ret['R_PA_Custom']) ? ret['R_PA_Custom'][0] : ret['R_PA_Custom'];
+  const customRunPerPa = Array.isArray((ret as any)['R_PA_Custom']) ? (ret as any)['R_PA_Custom'][0] : (ret as any)['R_PA_Custom'];
   const wrcPlusCustom = calculateWrcPlus(wraaCustom, customRunPerPa || 0);
 
   const StatItem = ({ label, value, color }: { label: string; value: string | number; color?: string }) => (
