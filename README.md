@@ -1,48 +1,48 @@
-# ⚾ Sit-Val (Situation-based Value model)
+# ⚾ Sit-Val: Sabermetrics Wiki & Analysis Tool
 
-**Sit-Val**은 야구 경기에서 발생하는 타격 결과를 주자, 아웃, 득점 상태를 포함한 **상황(Situation)**으로 해석하고, 각 결과가 만들어내는 **기대 득점 변화**를 정량화하는 전문 분석 도구입니다. 
+**Sit-Val**은 야구 기록을 누구나 등록하고 관리할 수 있는 **위키 스타일의 베이스볼 레퍼런스**이자, **흡수 마르코프 연쇄(Absorbing Markov Chain)** 모델을 통해 타격 기록의 정교한 확장 가치를 산출하는 전문 분석 도구입니다.
 
 ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
 ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 ---
 
-## ✨ 주요 기능
+## 🚀 핵심 목표 및 기능
 
-- **정교한 상황 모델링 (Situation Modeling)**: 주자의 진루 능력과 타격 결과 분포를 기반으로 상태 전이 행렬(Transition Matrix)을 구축하여 기대 득점(Expected Runs)을 정밀하게 계산합니다.
-- **데이터 입력 및 커스터마이징**:
-  - **Batter Input**: 실시간 타격 지표(AVG, OBP, SLG, OPS) 및 기대 타석 결과 계산
-  - **Runner Input**: 상황별 주자 진루 확률(추가 진루, 병살, 도루 등)의 세부 설정 지원
-- **리그 분석 (League Analysis)**:
-  - 실시간 RE24 상황판 및 9이닝당 기대 득점 예측
-  - 리그 확장 가치 지표(wOBA Scale, R/PA) 산출
-  - 개인 기록 기반의 확장 가치(wOBA, wRAA, wRC+) 자동 계산
-- **라인업 시뮬레이션 (Line-Up Simulation)**:
-  - 팀 구성에 따른 9이닝당 기대 득점 변화 분석
-  - 타순별 선두타자 시작 확률 및 이닝별 득점 분포 시뮬레이션
-- **유연한 시각화 대시보드**: `VisualizerBox` 시스템을 통해 9RE, RE24 상황판, 타구 가치 분석 등 원하는 분석 도구를 자유롭게 추가하고 배치할 수 있습니다.
+### 1. 베이스볼 레퍼런스형 위키 시스템
+*   **기록 아카이브:** 리그, 팀, 선수의 연도별 타격 기록을 체계적으로 저장하고 검색할 수 있습니다.
+*   **포크(Fork) 및 편집:** 타인이 등록한 기록을 기반으로 자신만의 시나리오를 구성할 수 있도록 자유로운 편집 및 복제 기능을 제공합니다.
+*   **타격 결과 중심:** 단순한 결과값이 아닌, 상황별 타격 결과(안타, 볼넷, 아웃 종류 등)의 분포를 상세하게 관리합니다.
+
+### 2. 마르코프 모델 기반 확장 가치 계산
+*   **흡수 마르코프 연쇄 엔진:** 야구의 모든 상황(아웃, 주자 상태)을 확률 전이 행렬로 모델링하여 기대 득점(Expected Runs)을 수학적으로 산출합니다.
+*   **정밀한 Sabermetrics 지표:**
+    *   **RE24 상황판:** 상황별 기대 득점 변화를 즉시 시각화합니다.
+    *   **리그 가치 산출:** 해당 리그의 평균을 기반으로 한 wOBA Weights 및 Scale을 자동으로 계산합니다.
+    *   **개인 가치 분석:** 특정 선수의 기록이 리그 평균 대비 어느 정도의 가치(wRAA, wRC+)를 가지는지 정량화합니다.
+
+### 3. 유연한 시뮬레이션 및 대시보드
+*   **라인업 시뮬레이션:** 타순 배치 및 주자의 주루 능력 설정에 따른 9이닝당 기대 득점 변화를 분석합니다.
+*   **Visualizer Dashboard:** RE24, 9RE, 타구 가치 등 다양한 분석 도구를 사용자가 원하는 대로 배치하고 조합할 수 있습니다.
 
 ## 📂 프로젝트 구조
-
 ```text
-src/
-├── common/             # 공용 컴포넌트(UI, Input), 유틸리티 및 핵심 엔진(Transition Engine)
-├── features/           # 도메인별 독립 모듈 (Vertical Slices)
-│   ├── league/         # 리그 분석 관련 API, 시각화 컴포넌트(Visualizers)
-│   └── line-up/        # 라인업 분석 관련 로직 및 컴포넌트
-└── pages/              # 라우팅 단위 페이지 (Layout 구성)
+@packages/sit-val    # 흡수 마르코프 연쇄 모델
+@apps/              # Domain Applications (선수, 리그, 라인업)
+@shared/            # Shared Utilities (공통 컴포넌트)
+public/             # 정적 자원 (앱 아이콘, 가이드 마크다운 등)
 ```
 
-## Technology Stack & Roadmap
+## 🛠 Technology Stack
 
-- **Frontend**: React (Hooks, Context API, ForwardRef)
-- **State Management**: 상황별 확률 전이 행렬 모델링
-- **i18n**: 향후 표준 i18n 라이브러리를 통해 다국어 지원을 재구현할 예정입니다.
+- **Frontend**: React, TypeScript, Vite
+- **Backend/DB**: Supabase (RLS 기반 보안 및 소유권 관리)
+- **Sabermetric Engine**: Absorbing Markov Chain Model (Custom Implementation)
 
 ## Deployment
-
 GitHub Actions를 통해 메인 브랜치 푸시 시 GitHub Pages로 자동 빌드 및 배포됩니다.
 
 ---
-© 2024 Underland Lab. All rights reserved.
+© 2026 Underland Lab. All rights reserved.
