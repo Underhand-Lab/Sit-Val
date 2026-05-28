@@ -1,28 +1,28 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Div } from '@shared/bridges/UIBridge';
-import * as TransitionEngine from '@sit-val/lib/transition-engine/'
 import * as Calc from "@sit-val/lib/sabermetrics/calc";
-import { db } from '../services/db';
-import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
-import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
+import * as TransitionEngine from '@sit-val/lib/transition-engine/';
+import { BatterStats, BatterStatsData } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
+import { db } from '../services/db';
 
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
-import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
+import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 
-import { ExtendedBatterStats, YearlyLeague } from '../types/Database';
-import { calculateBatterAbility } from '../common/api/stats';
 import { calculateBasicStats } from '../common/api/baseball';
+import { calculateBatterAbility } from '../common/api/stats';
 import { BasicStats } from '../types/BasicStats';
+import { YearlyLeague } from '../types/Database';
 
 // 서브 페이지 임포트
-import LeagueSearchPage from './league/LeagueSearchPage';
-import LeagueInfoPage from './league/LeagueInfoPage';
-import LeagueEditPage from './league/LeagueEditPage';
-import RE24Visualizer from '@apps/features/league/components/RE24Visualizer';
 import LeagueBigInningVisualizer from '@apps/features/league/components/LeagueBigInningVisualizer';
+import RE24Visualizer from '@apps/features/league/components/RE24Visualizer';
+import LeagueEditPage from './league/LeagueEditPage';
+import LeagueInfoPage from './league/LeagueInfoPage';
+import LeagueSearchPage from './league/LeagueSearchPage';
 
 const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0 };
 const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
@@ -54,9 +54,22 @@ function LeaguePage() {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			setIsLoading(true);
 			const targetId = id === 'new' ? searchParams.get('from') : id;
 			if (!id) return;
+
+			// 1. 캐시 확인: 로딩 상태를 켜기 전에 동기적으로 확인합니다.
+			const cached = targetId ? db.getSyncCache(`yearlyLeague_${targetId}`) : null;
+			if (cached) {
+				setYearlyLeagueData(cached);
+				setLeagueBatterStats(cached.stats); 
+				setSelectedYear(cached.year); 
+				setLeagueIdInput(cached.leagueId);
+				setIsLoading(false); // 이미 데이터가 있으므로 로딩 생략
+			} else {
+				setIsLoading(true);
+			}
+
+			// 2. 실제 DB 조회 (캐시가 있더라도 최신화를 위해 수행하거나, 위에서 return 하여 생략 가능)
 			const data = targetId ? await db.getYearlyLeagueById(targetId) : null;
 			if (data) { 
 				setYearlyLeagueData(data);

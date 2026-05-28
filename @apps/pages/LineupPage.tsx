@@ -1,24 +1,24 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom';
 import { Div } from '@shared/bridges/UIBridge';
+import React, { useCallback, useEffect, useState } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 
+import { RunnerStats } from '@sit-val/types/RunnerStats';
 import { calculateLineupRE, LineupCalculationResult } from '../features/lineup/api/re-line-up';
-import { RunnerStats } from '@sit-val/types/RunnerStats'
-import LeadoffVisualizer from '../features/lineup/components/LeadoffVisualizer'
+import LeadoffVisualizer from '../features/lineup/components/LeadoffVisualizer';
 // import Lineup9RE from '../features/lineup/components/Lineup9RE' // Removed as per request
-import LineupRE24 from '../features/lineup/components/LineupRE24'
-import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
+import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer';
+import LineupRE24 from '../features/lineup/components/LineupRE24';
 
-import { db } from '../services/db';
 import { BatterStats } from '@packages/sit-val/types/BatterStats';
 import { YearlyPlayer } from '@packages/sit-val/types/Database';
-import { calculateBatterAbility } from '../common/api/stats';
 import { calculateBasicStats } from '../common/api/baseball';
-import { BasicStats } from '../types/BasicStats';
-import LineupSearchPage from './lineup/LineupSearchPage';
-import LineupInfoPage from './lineup/LineupInfoPage';
-import LineupEditPage from './lineup/LineupEditPage';
+import { calculateBatterAbility } from '../common/api/stats';
 import LineupVisualizer from '../features/lineup/components/LineupVisualizer';
+import { db } from '../services/db';
+import { BasicStats } from '../types/BasicStats';
+import LineupEditPage from './lineup/LineupEditPage';
+import LineupInfoPage from './lineup/LineupInfoPage';
+import LineupSearchPage from './lineup/LineupSearchPage';
 
 export interface LineupPlayerDisplay extends YearlyPlayer {
 	name: string;
@@ -51,7 +51,7 @@ const NewLineupPage: React.FC = () => {
 	]);
 	const [vizData, setVizData] = useState<[LineupCalculationResult, BasicStats] | null>(null);
 
-	const [availablePlayers, setAvailablePlayers] = useState<LineupPlayerDisplay[]>([]);
+	const [availablePlayers, setAvailablePlayers] = useState<LineupPlayerDisplay[]>(db.getSyncCache('allYearlyPlayersWithNames') || []);
 	const [currentLineupPlayers, setCurrentLineupPlayers] = useState<LineupPlayerDisplay[]>([]);
 	const [lineupOrder, setLineupOrder] = useState<string[]>([]);
 	const [lineupName, setLineupName] = useState<string>('새 라인업');
@@ -107,9 +107,22 @@ const NewLineupPage: React.FC = () => {
 
 	useEffect(() => {
 		const fetchData = async () => {
-			setIsLoading(true);
 			const targetId = id === 'new' ? searchParams.get('from') : id;
 			if (!id) return;
+
+			// 1. 캐시 확인: 동기적으로 체크하여 데이터가 있으면 로딩 화면을 건너뜁니다.
+			const cached = targetId ? db.getSyncCache(`yearlyLineup_${targetId}`) : null;
+			if (cached) {
+				setLineupOrder(cached.playerIds);
+				setLineupRunnerStats(cached.runnerStats);
+				setLineupName(cached.name);
+				setSelectedYear(cached.year);
+				setIsLoading(false);
+			} else {
+				setIsLoading(true);
+			}
+
+			// 2. 최신 데이터 조회
 			const data = targetId ? await db.getYearlyLineupById(targetId) : null;
 			if (data) { setLineupOrder(data.playerIds); setLineupRunnerStats(data.runnerStats); setLineupName(data.name); setSelectedYear(data.year); }
 			setIsEditMode(id === 'new');

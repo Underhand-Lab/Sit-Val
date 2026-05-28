@@ -7,6 +7,7 @@ import { db } from '../../services/db';
 import { YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
 import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { VisualizerList } from '../../common/components/VisualizerList';
+import { INITIAL_BATTER_STATS } from '../PlayerPage';
 
 interface PlayerEditPageProps {
   id: string;
@@ -15,7 +16,7 @@ interface PlayerEditPageProps {
   setPlayerName: (name: string) => void;
   selectedYear: number;
   setSelectedYear: (year: number) => void;
-  currentBatterStats: BatterStats;
+  currentBatterStats: BatterStatsData;
   setCurrentBatterStats: (stats: BatterStatsData) => void;
   yearlyLeagueId: string;
   setYearlyLeagueId: (id: string) => void;
@@ -58,8 +59,8 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
       ...(playerYearlyStats || { playerId: playerIdToUse, yearlyTeamIds: [] }), 
       id: playerYearlyStats?.id || '', 
       year: selectedYear, 
-      stats: { ...currentBatterStats, r: 0, rbi: 0 }, 
-      name: playerName,
+      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), r: 0, rbi: 0 } as any, 
+      name: playerName || '',
       yearlyLeagueId: yearlyLeagueId || undefined
     };
     try {
@@ -68,13 +69,13 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
     } catch (e: any) { alert(e.message); }
   }, [playerYearlyStats, currentBatterStats, selectedYear, playerName, yearlyLeagueId, id, navigate]);
 
-  const isMetaValid = playerName.trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
+  const isMetaValid = (playerName || '').trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
 
   // 분석 도구들에 현재 편집 중인 실시간 스탯을 주입합니다.
   const toolsWithStats = useMemo(() => {
     return activeTools.map(tool => ({
       ...tool,
-      props: { ...tool.props, batterStats: currentBatterStats }
+      props: { ...tool.props, batterStats: new BatterStats(currentBatterStats || INITIAL_BATTER_STATS) }
     }));
   }, [activeTools, currentBatterStats]);
 
@@ -117,8 +118,8 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
                 { label: '선택 안함', value: '' },
                 ...yearlyLeagues
                   .filter((l: any) => 
-                    l.leagueId.toLowerCase().includes(leagueSearch.toLowerCase()) || 
-                    l.year.toString().includes(leagueSearch)
+                    (l.leagueId || '').toLowerCase().includes(leagueSearch.toLowerCase()) || 
+                    (l.year || '').toString().includes(leagueSearch)
                   )
                   .map((league: any) => ({ label: `${league.year} ${league.leagueId}`, value: league.id }))
               ]}
