@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Div, Box, FixedFooter, Button, vars } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../common/components/VisualizerList';
-import { YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
+import { YearlyPlayer, YearlyLeague, ExtendedBatterStats } from '@packages/sit-val/types/Database';
+import { BatterStats } from '@sit-val/types/BatterStats';
 
 interface PlayerInfoPageProps {
   id: string;
@@ -29,7 +30,10 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
   const toolsWithStats = useMemo(() => {
     return activeTools.map(tool => ({
       ...tool,
-      props: { ...tool.props, batterStats: playerInfo?.stats }
+      props: { 
+        ...tool.props, 
+        batterStats: playerInfo?.stats ? new BatterStats(playerInfo.stats) : undefined 
+      }
     }));
   }, [activeTools, playerInfo]);
 

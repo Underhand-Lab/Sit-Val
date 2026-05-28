@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Div } from '@shared/bridges/UIBridge';
 import { db } from '../services/db';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { Player, YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
 import * as TransitionEngine from '@sit-val/lib/transition-engine/';
 import * as Calc from "@sit-val/lib/sabermetrics/calc";
@@ -23,7 +23,7 @@ import PlayerSearchPage from './player/PlayerSearchPage';
 import PlayerInfoPage from './player/PlayerInfoPage';
 import PlayerEditPage from './player/PlayerEditPage';
 
-const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0 };
+const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0 };
 
 // Initial runner stats for calculation if league data is missing
 const INITIAL_RUNNER_STATS: RunnerStats = {
@@ -41,6 +41,7 @@ const PlayerPage: React.FC = () => {
   const transitionEngine = useMemo(() => new TransitionEngine.Standard(), []);
 
   const [playerYearlyStats, setPlayerYearlyStats] = useState<YearlyPlayer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [playerInfo, setPlayerInfo] = useState<Player | null>(null);
   const [leagueData, setLeagueData] = useState<YearlyLeague | null>(null);
   const [yearlyLeagueId, setYearlyLeagueId] = useState<string>('');
@@ -65,33 +66,47 @@ const PlayerPage: React.FC = () => {
   };
 
   useEffect(() => {
-    const targetId = id === 'new' ? searchParams.get('from') : id;
-    if (!id) return;
-    const data = targetId ? db.getYearlyPlayerById(targetId) : null;
-    if (data) {
-      setPlayerYearlyStats(data); setCurrentBatterStats(data.stats); setSelectedYear(data.year); setYearlyLeagueId(data.yearlyLeagueId || '');
-      const info = (db.getPlayers()).find(p => p.id === data.playerId) || { id: data.playerId, name: (data as any).name || '알 수 없음' };
-      setPlayerInfo(info); setPlayerName(info.name);
-      const linkedLeague = db.getData('yearlyLeagues').find(l => l.id === data.yearlyLeagueId);
-      setLeagueData(linkedLeague || null);
-    } else if (id === 'new') {
-      setPlayerInfo({ id: 'new', name: '신규 분석' }); setPlayerName('신규 분석');
-    }
-    setIsEditMode(id === 'new');
+    const fetchData = async () => {
+      setIsLoading(true);
+      const targetId = id === 'new' ? searchParams.get('from') : id;
+      if (!id) return;
+      const data = targetId ? await db.getYearlyPlayerById(targetId) : null;
+      if (data) {
+        setPlayerYearlyStats(data); setCurrentBatterStats(data.stats); setSelectedYear(data.year); setYearlyLeagueId(data.yearlyLeagueId || '');
+        const players = await db.getPlayers();
+        const info = players.find(p => p.id === data.playerId) || { id: data.playerId, name: (data as any).name || '알 수 없음' };
+        setPlayerInfo(info); setPlayerName(info.name);
+        
+        if (data.yearlyLeagueId) {
+          const linkedLeague = await db.getYearlyLeagueById(data.yearlyLeagueId);
+          setLeagueData(linkedLeague || null);
+        }
+      } else if (id === 'new') {
+        setPlayerInfo({ id: 'new', name: '신규 분석' }); setPlayerName('신규 분석');
+      }
+      setIsEditMode(id === 'new');
+      setIsLoading(false);
+    };
+    fetchData();
   }, [id, searchParams]);
 
   // 연동 리그 ID가 변경될 때 leagueData를 동기화하여 저장 전에도 실시간 계산이 가능하게 합니다.
   useEffect(() => {
-    const linkedLeague = db.getData('yearlyLeagues').find(l => l.id === yearlyLeagueId);
-    setLeagueData(linkedLeague || null);
+    const syncLeague = async () => {
+      if (!yearlyLeagueId) return;
+      const linkedLeague = await db.getYearlyLeagueById(yearlyLeagueId);
+      setLeagueData(linkedLeague || null);
+    };
+    syncLeague();
   }, [yearlyLeagueId]);
 
   // RE 계산 로직은 공통으로 사용하므로 Entry에서 관리
   const execute = useCallback(() => {
     if (!currentBatterStats || !leagueData) return setVizData(null);
-    const ability = calculateBatterAbility(currentBatterStats);
+    const stats = new BatterStats(currentBatterStats);
+    const ability = calculateBatterAbility(stats);
     const ret = calculateRE(ability, INITIAL_RUNNER_STATS, transitionEngine);
-    const lgBatter = { ...leagueData.stats, pa: leagueData.stats.pa || 1 };
+    const lgBatter = new BatterStats(leagueData.stats);
     const weights = Calc.calculateWeightedRunValue(lgBatter, ret['runValue']);
     const lgWobaRaw = Calc.calculateCustomWOBA(weights, lgBatter);
     setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], lgBatter)]);
@@ -99,7 +114,8 @@ const PlayerPage: React.FC = () => {
   useEffect(() => { execute(); }, [execute]);
 
   if (!id) return <PlayerSearchPage />;
-  if (id !== 'new' && !db.getYearlyPlayerById(id)) return <Div style={{ padding: '40px' }}>404 - 선수를 찾을 수 없습니다.</Div>;
+  if (isLoading) return <Div style={{ padding: '40px' }}>불러오는 중...</Div>;
+  if (id !== 'new' && !playerYearlyStats) return <Div style={{ padding: '40px' }}>404 - 선수를 찾을 수 없습니다.</Div>;
 
   return isEditMode ? (
     <PlayerEditPage 
@@ -107,7 +123,7 @@ const PlayerPage: React.FC = () => {
       playerYearlyStats={playerYearlyStats}
       playerName={playerName} setPlayerName={setPlayerName}
       selectedYear={selectedYear} setSelectedYear={setSelectedYear}
-      currentBatterStats={currentBatterStats} setCurrentBatterStats={setCurrentBatterStats}
+      currentBatterStats={new BatterStats(currentBatterStats)} setCurrentBatterStats={setCurrentBatterStats}
       yearlyLeagueId={yearlyLeagueId} setYearlyLeagueId={setYearlyLeagueId}
       activeTools={activeTools}
       onRemoveTool={onRemoveTool}

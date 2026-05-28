@@ -8,7 +8,7 @@ import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput'
 import { db } from '../../services/db';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
-import { YearlyPlayer, Player } from '@packages/sit-val/types/Database';
+import { ExtendedBatterStats, YearlyPlayer, Player } from '@packages/sit-val/types/Database';
 import { LineupPlayerDisplay } from '../LineupPage';
 
 interface LineupEditPageProps {
@@ -63,34 +63,45 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 		setEditingPlayerStats(newStats);
 	};
 
-	const handleSaveEditedPlayerStats = useCallback(() => {
+	const handleSaveEditedPlayerStats = useCallback(async () => {
 		if (!editingYearlyPlayerId || !editingPlayerStats) return alert('저장할 데이터가 없습니다.');
 		const originalYearlyPlayer = availablePlayers.find(p => p.id === editingYearlyPlayerId);
 		if (!originalYearlyPlayer) return alert('원본 선수를 찾을 수 없습니다.');
-		const dataToSave: Omit<YearlyPlayer, 'creatorId'> = { ...originalYearlyPlayer, stats: { ...editingPlayerStats, r: 0, rbi: 0 } };
+		const dataToSave: Omit<YearlyPlayer, 'creatorId'> = { ...originalYearlyPlayer, stats: { ...editingPlayerStats, r: 0, rbi: 0 } as ExtendedBatterStats };
 		try {
-			db.saveYearlyPlayer(dataToSave);
-			setAvailablePlayers(db.getPlayersWithYearlyStats(selectedYear));
+			await db.saveYearlyPlayer(dataToSave);
+			const updatedPlayers = await db.getPlayersWithYearlyStats(selectedYear);
+			setAvailablePlayers(updatedPlayers);
 			setBatterEditOpen(false);
 		} catch (e: any) { alert(e.message); }
 	}, [editingYearlyPlayerId, editingPlayerStats, availablePlayers, selectedYear, setAvailablePlayers]);
 
-	const handleAddNewPlayerToDB = () => {
+	const handleAddNewPlayerToDB = async () => {
 		const newPlayerId = `new-player-${Date.now()}`;
 		const newPlayerBase: Player = { id: newPlayerId, name: `새 선수 ${Date.now()}` };
-		db.addPlayer(newPlayerBase);
+		await db.addPlayer(newPlayerBase);
+		const user = await db.getCurrentUser();
 		const newYearlyPlayer: YearlyPlayer & { name: string } = {
 			id: `${newPlayerId}-${selectedYear}-${Date.now()}`, playerId: newPlayerId, name: newPlayerBase.name, year: selectedYear, yearlyTeamIds: [],
 			stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0, r: 0, rbi: 0 },
-			creatorId: db.getCurrentUser().id,
+			creatorId: user?.id || 'unknown',
 		};
-		db.saveYearlyPlayer(newYearlyPlayer);
+		await db.saveYearlyPlayer(newYearlyPlayer);
 		setAvailablePlayers(prev => [...prev, newYearlyPlayer as LineupPlayerDisplay]);
 		startEditPlayer(newYearlyPlayer.id, newYearlyPlayer.stats);
 	};
 
-	const handleSaveLineupStats = useCallback(() => {
-		const res = db.saveYearlyLineup({
+	const handleSaveLineupStats = useCallback(async () => {
+		const user = await db.getCurrentUser();
+		if (!user) {
+			if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+				const pendingData = { lineupName, selectedYear, lineupOrder, lineupRunnerStats };
+				localStorage.setItem('pending_lineup_edit', JSON.stringify(pendingData));
+				navigate('/login');
+			}
+			return;
+		}
+		const res = await db.saveYearlyLineup({
 			id: id !== 'new' ? id! : '',
 			name: lineupName,
 			year: selectedYear,

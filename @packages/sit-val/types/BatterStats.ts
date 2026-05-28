@@ -10,7 +10,7 @@ export interface BatterStatsData {
   sf: number;
   sh: number;
   hbp: number;
-  pa?: number;
+  // pa는 자동 계산되므로 데이터 인터페이스에서 제외
   [key: string]: any;
 }
 
@@ -31,7 +31,8 @@ export class BatterStats implements Omit<BatterStatsData, 'pa'> {
 
   constructor(init?: Partial<BatterStats>) {
     if (init) {
-      Object.assign(this, init);
+      const { pa, ...data } = init as any; // 데이터에 포함된 pa 필드는 무시
+      Object.assign(this, data);
     }
   }
 

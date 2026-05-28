@@ -10,6 +10,7 @@ import LineupRE24 from '../features/lineup/components/LineupRE24'
 import LineupBigInningVisualizer from '../features/lineup/components/LineupBigInningVisualizer'
 
 import { db } from '../services/db';
+import { BatterStats } from '@packages/sit-val/types/BatterStats';
 import { YearlyPlayer } from '@packages/sit-val/types/Database';
 import { calculateBatterAbility } from '../common/api/stats';
 import { calculateBasicStats } from '../common/api/baseball';
@@ -43,6 +44,7 @@ const NewLineupPage: React.FC = () => {
 	const { id } = useParams();
 	const [searchParams] = useSearchParams();
 
+	const [isLoading, setIsLoading] = useState(true);
 	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
 		{ id: '1', name: '라인업 정보', Component: LineupVisualizer },
 		{ id: '2', name: '팀 RE24', Component: LineupRE24 }, // Keeping RE24 separate
@@ -72,8 +74,17 @@ const NewLineupPage: React.FC = () => {
 
 	const execute = useCallback(() => {
 		if (lineupOrder.length === 9) {
-			const playerStatsList = lineupOrder.map(id => currentLineupPlayers.find(p => p.id === id)!.stats);
-			const abilities = playerStatsList.map(stats => calculateBatterAbility(stats));
+			// 방어 코드: 선수를 찾지 못한 경우 null을 반환하고 이후 필터링
+			const playerStatsList = lineupOrder
+				.map(id => currentLineupPlayers.find(p => p.id === id)?.stats)
+				.filter((s): s is YearlyPlayer['stats'] => s !== undefined);
+
+			if (playerStatsList.length !== 9) {
+				setVizData(null);
+				return;
+			}
+
+			const abilities = playerStatsList.map(stats => calculateBatterAbility(new BatterStats(stats)));
 
 			const teamStats = playerStatsList.reduce((acc, s) => ({
 				'1B': acc['1B'] + (s['1B'] || 0),
@@ -87,60 +98,91 @@ const NewLineupPage: React.FC = () => {
 				sf: acc.sf + (s.sf || 0),
 				sh: acc.sh + (s.sh || 0),
 				hbp: acc.hbp + (s.hbp || 0),
-				pa: acc.pa + (s.pa || 0),
-			}), { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0 });
+			}), { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0 });
 
-			const basic = calculateBasicStats(teamStats);
+			const basic = calculateBasicStats(new BatterStats(teamStats));
 			setVizData([calculateLineupRE(abilities, lineupRunnerStats), basic]);
 		} else setVizData(null);
 	}, [currentLineupPlayers, lineupOrder, lineupRunnerStats]);
 
 	useEffect(() => {
-		const targetId = id === 'new' ? searchParams.get('from') : id;
-		if (!id) return;
-		const data = targetId ? db.getYearlyLineupById(targetId) : null;
-		if (data) { setLineupOrder(data.playerIds); setLineupRunnerStats(data.runnerStats); setLineupName(data.name); setSelectedYear(data.year); }
-		setIsEditMode(id === 'new');
+		const fetchData = async () => {
+			setIsLoading(true);
+			const targetId = id === 'new' ? searchParams.get('from') : id;
+			if (!id) return;
+			const data = targetId ? await db.getYearlyLineupById(targetId) : null;
+			if (data) { setLineupOrder(data.playerIds); setLineupRunnerStats(data.runnerStats); setLineupName(data.name); setSelectedYear(data.year); }
+			setIsEditMode(id === 'new');
+
+			// 임시 저장된 데이터 복구
+			const pending = localStorage.getItem('pending_lineup_edit');
+			if (pending) {
+				const pData = JSON.parse(pending);
+				setLineupOrder(pData.lineupOrder);
+				setLineupRunnerStats(pData.lineupRunnerStats);
+				setLineupName(pData.lineupName);
+				setSelectedYear(pData.selectedYear);
+				localStorage.removeItem('pending_lineup_edit');
+			}
+			setIsLoading(false);
+		};
+		fetchData();
 	}, [id, searchParams]);
 
 	useEffect(() => { execute(); }, [execute]);
 	useEffect(() => {
-		const playersWithStats = db.getPlayersWithYearlyStats(selectedYear);
-		setAvailablePlayers(playersWithStats);
+		const fetchPlayers = async () => {
+			const playersWithStats = await db.getPlayersWithYearlyStats(selectedYear);
+			setAvailablePlayers(playersWithStats);
+		};
+		fetchPlayers();
 	}, [selectedYear]);
 
+	// 타순(lineupOrder)과 실제 선수 데이터(availablePlayers)를 기반으로 화면에 표시할 선수 목록을 동기화합니다.
 	useEffect(() => {
+		// isLoading이 true일 때는 아직 데이터 로딩 중이므로 currentLineupPlayers를 업데이트하지 않습니다.
+		if (isLoading) return;
+
+		const newLineupOrder = [...lineupOrder];
 		const newCurrentLineupPlayers: LineupPlayerDisplay[] = [];
-		const newLineupOrder: string[] = [];
-		lineupOrder.forEach(yearlyPlayerId => {
-			const player = availablePlayers.find(p => p.id === yearlyPlayerId);
-			if (player) {
-				newCurrentLineupPlayers.push(player);
-				newLineupOrder.push(yearlyPlayerId);
+
+		for (let i = 0; i < 9; i++) {
+			const yearlyPlayerId = newLineupOrder[i];
+			let player = yearlyPlayerId ? availablePlayers.find(p => p.id === yearlyPlayerId) : undefined;
+
+			if (!player) {
+				// 해당 ID의 선수가 없거나 ID가 없는 경우 플레이스홀더 생성
+				const placeholderId = `placeholder-${id}-${i + 1}`;
+				player = {
+					id: placeholderId,
+					playerId: `temp-player-${i + 1}`,
+					name: `선수 ${i + 1}`,
+					year: selectedYear,
+					yearlyTeamIds: [],
+					stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, r: 0, rbi: 0 },
+					creatorId: 'unknown',
+				};
+				newLineupOrder[i] = placeholderId; // 타순 정보도 플레이스홀더 ID로 업데이트
 			}
-		});
-		while (newLineupOrder.length < 9) {
-			const placeholderId = `placeholder-${id}-${newLineupOrder.length + 1}`;
-			const placeholderPlayer: LineupPlayerDisplay = {
-				id: placeholderId, playerId: `temp-player-${newLineupOrder.length + 1}`, name: `선수 ${newLineupOrder.length + 1}`, year: selectedYear, yearlyTeamIds: [],
-				stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, pa: 0, r: 0, rbi: 0 },
-				creatorId: db.getCurrentUser().id,
-			};
-			newCurrentLineupPlayers.push(placeholderPlayer);
-			newLineupOrder.push(placeholderId);
+			newCurrentLineupPlayers.push(player!);
 		}
-		setCurrentLineupPlayers(newCurrentLineupPlayers.slice(0, 9));
-		setLineupOrder(newLineupOrder.slice(0, 9));
-	}, [availablePlayers, selectedYear, id]);
+
+		setCurrentLineupPlayers(newCurrentLineupPlayers);
+		
+		// 실제 값이 변경된 경우에만 lineupOrder를 업데이트하여 무한 루프 방지
+		if (JSON.stringify(lineupOrder) !== JSON.stringify(newLineupOrder)) {
+			setLineupOrder(newLineupOrder);
+		}
+	}, [availablePlayers, selectedYear, id, lineupOrder, isLoading]);
 
 	useEffect(() => { if (isEditMode) setLineupRunnerStats(originalLineupRunnerStats); }, [isEditMode, originalLineupRunnerStats]);
 
 	if (!id) return <LineupSearchPage />;
-	if (id !== 'new' && !db.getYearlyLineupById(id)) return <Div style={{ padding: '40px' }}>404 - 라인업 없음</Div>;
+	if (isLoading) return <Div style={{ padding: '40px' }}>불러오는 중...</Div>;
 
 	return isEditMode ? (
 		<LineupEditPage
-			id={id}
+			id={id === 'new' ? (searchParams.get('from') || 'new') : id!}
 			lineupName={lineupName} setLineupName={setLineupName}
 			selectedYear={selectedYear} setSelectedYear={setSelectedYear}
 			availablePlayers={availablePlayers} setAvailablePlayers={setAvailablePlayers}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Div, vars } from '@shared/bridges/UIBridge';
 import { db } from '../../services/db';
@@ -7,7 +7,24 @@ import { DataManagementView } from '../../common/components/DataManagementView';
 
 const PlayerSearchPage: React.FC = () => {
 	const navigate = useNavigate();
-	const [players, setPlayers] = useState(db.getData('yearlyPlayers'));
+	const [players, setPlayers] = useState<(YearlyPlayer & { name: string })[]>(db.getSyncCache('allYearlyPlayersWithNames') || []);
+	const [isLoading, setIsLoading] = useState(players.length === 0);
+
+	const loadPlayers = useCallback(async () => {
+		try {
+			setIsLoading(true);
+			const data = await db.getAllYearlyPlayersWithNames();
+			setPlayers(data);
+		} catch (e) {
+			console.error("데이터 로드 실패:", e);
+		} finally {
+			setIsLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		loadPlayers();
+	}, [loadPlayers]);
 
 	// ListItemCard 컴포넌트를 PlayerSearchPage 내부에 정의하여 hover 및 삭제 기능을 적용합니다.
 	const ListItemCard: React.FC<{
@@ -40,11 +57,11 @@ const PlayerSearchPage: React.FC = () => {
 		);
 	};
 
-	const handleDeletePlayer = (id: string) => {
+	const handleDeletePlayer = async (id: string) => {
 		if (window.confirm('정말로 이 선수를 삭제하시겠습니까?')) {
 			try {
-				db.deleteYearlyPlayer(id);
-				setPlayers(db.getData('yearlyPlayers')); // 목록 새로고침
+				await db.deleteYearlyPlayer(id);
+				await loadPlayers(); // 목록 새로고침
 			} catch (error: any) {
 				alert(`삭제 실패: ${error.message}`);
 			}
@@ -56,6 +73,7 @@ const PlayerSearchPage: React.FC = () => {
 			title="선수"
 			items={players as (YearlyPlayer & { creatorId?: string })[]}
 			createPath="/player/new"
+			isLoading={isLoading}
 			onDeleteItem={handleDeletePlayer}
 			renderItem={(p, isCreator, onDelete) => (
 				<ListItemCard onClick={() => navigate(`/player/${p.id}`)}>

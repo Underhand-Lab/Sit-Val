@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Div, Button, H3, vars } from '@shared/bridges/UIBridge';
 import { useNavigate } from 'react-router-dom';
 import * as Hangul from 'hangul-js';
@@ -10,19 +10,21 @@ interface Props<T> {
   createPath: string; // 새 항목 생성 경로
   renderItem: (item: T & { creatorId?: string }, isCreator: boolean, onDeleteItem: (id: string) => void) => React.ReactNode; // 아이템 렌더링 함수
   onDeleteItem?: (id: string) => void; // 아이템 삭제 콜백
+  isLoading?: boolean; // 로딩 상태 추가
 }
 
-export const DataManagementView = <T extends { id: string }>({ title, items, createPath, renderItem, onDeleteItem }: Props<T>) => {
+export const DataManagementView = <T extends { id: string }>({ title, items, createPath, renderItem, onDeleteItem, isLoading }: Props<T>) => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
   const filteredItems = useMemo(() => {
+    const safeItems = Array.isArray(items) ? items : [];
     const trimmedSearch = searchTerm.trim();
-    if (!trimmedSearch) return items;
+    if (!trimmedSearch) return safeItems;
 
     const lowerSearch = trimmedSearch.toLowerCase();
     
-    return items.filter(item => {
+    return safeItems.filter(item => {
       const target = item as any;
       
       // 한글 검색 (초성 및 비완성형 지원) - name, leagueId 필드에 대해 적용
@@ -39,7 +41,11 @@ export const DataManagementView = <T extends { id: string }>({ title, items, cre
     });
   }, [items, searchTerm]);
 
-  const currentUser = useMemo(() => db.getCurrentUser(), []);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    db.getCurrentUser().then(user => setCurrentUser(user));
+  }, []);
 
   return (
     <Div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', boxSizing: 'border-box', width: '100%' }}>
@@ -86,7 +92,11 @@ export const DataManagementView = <T extends { id: string }>({ title, items, cre
       
       <Box style={{ padding: '10px' }}>
         <Div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {filteredItems.length === 0 ? (
+          {isLoading ? (
+            <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>로딩 중...</p>
+          ) : items.length === 0 ? (
+            <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>등록된 정보가 없습니다.</p>
+          ) : filteredItems.length === 0 ? (
             <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>검색 결과가 없습니다.</p>
           ) : (
             filteredItems.map(item => {

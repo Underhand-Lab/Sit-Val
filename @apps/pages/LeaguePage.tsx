@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { Div } from '@shared/bridges/UIBridge';
 import * as TransitionEngine from '@sit-val/lib/transition-engine/'
 import * as Calc from "@sit-val/lib/sabermetrics/calc";
 import { db } from '../services/db';
 import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
 
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
 import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
 
-import { ExtendedBatterStats } from '../types/Database';
+import { ExtendedBatterStats, YearlyLeague } from '../types/Database';
 import { calculateBatterAbility } from '../common/api/stats';
 import { calculateBasicStats } from '../common/api/baseball';
 import { BasicStats } from '../types/BasicStats';
@@ -24,7 +24,7 @@ import LeagueEditPage from './league/LeagueEditPage';
 import RE24Visualizer from '@apps/features/league/components/RE24Visualizer';
 import LeagueBigInningVisualizer from '@apps/features/league/components/LeagueBigInningVisualizer';
 
-const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0, pa: 596 };
+const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0 };
 const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
 
 const TOOL_OPTIONS = [
@@ -38,7 +38,10 @@ const TOOL_OPTIONS = [
 function LeaguePage() {
 	const { id } = useParams();
 	const [searchParams] = useSearchParams();
+	const navigate = useNavigate();
 	const transitionEngine = useMemo(() => new TransitionEngine.Standard(), []);
+	const [yearlyLeagueData, setYearlyLeagueData] = useState<YearlyLeague | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
 	const [isEditMode, setIsEditMode] = useState(false), [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS), [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number>(2024), [leagueIdInput, setLeagueIdInput] = useState<string>('kbo');
@@ -50,12 +53,32 @@ function LeaguePage() {
 	]);
 
 	useEffect(() => {
-		const targetId = id === 'new' ? searchParams.get('from') : id;
-		if (!id) return;
-		const data = targetId ? db.getYearlyLeagueById(targetId) : null;
-		if (id !== 'new' && !data) return; 
-		if (data) { setLeagueBatterStats(data.stats); setSelectedYear(data.year); setLeagueIdInput(data.leagueId); }
-		setIsEditMode(id === 'new');
+		const fetchData = async () => {
+			setIsLoading(true);
+			const targetId = id === 'new' ? searchParams.get('from') : id;
+			if (!id) return;
+			const data = targetId ? await db.getYearlyLeagueById(targetId) : null;
+			if (data) { 
+				setYearlyLeagueData(data);
+				setLeagueBatterStats(data.stats); 
+				setSelectedYear(data.year); 
+				setLeagueIdInput(data.leagueId); 
+			}
+			setIsEditMode(id === 'new');
+
+			// 임시 저장된 데이터 복구
+			const pending = localStorage.getItem('pending_league_edit');
+			if (pending) {
+				const pData = JSON.parse(pending);
+				setLeagueBatterStats(pData.leagueBatterStats);
+				setSelectedYear(pData.selectedYear);
+				setLeagueIdInput(pData.leagueIdInput);
+				setLeagueRunnerStats(pData.leagueRunnerStats);
+				localStorage.removeItem('pending_league_edit');
+			}
+			setIsLoading(false);
+		};
+		fetchData();
 	}, [id, searchParams]);
 
 	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
@@ -68,17 +91,29 @@ function LeaguePage() {
 	};
 
 	const execute = useCallback(() => {
-		const stats = calculateBatterAbility(leagueBatterStats);
-		const basic = calculateBasicStats(leagueBatterStats);
-		const ret = calculateRE(stats, leagueRunnerStats, transitionEngine);
-		const weights = Calc.calculateWeightedRunValue({ ...leagueBatterStats, pa: stats.pa }, ret['runValue']); const lgWobaRaw = Calc.calculateCustomWOBA(weights, { ...leagueBatterStats, pa: stats.pa });
-		setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], { ...leagueBatterStats, pa: stats.pa }), basic]);
+		const batterStats = new BatterStats(leagueBatterStats);
+		const ability = calculateBatterAbility(batterStats);
+		const basic = calculateBasicStats(batterStats);
+		const ret = calculateRE(ability, leagueRunnerStats, transitionEngine);
+		const weights = Calc.calculateWeightedRunValue(batterStats, ret['runValue']); 
+		const lgWobaRaw = Calc.calculateCustomWOBA(weights, batterStats);
+		setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], batterStats), basic]);
 	}, [leagueBatterStats, leagueRunnerStats, transitionEngine]);
 
-	const handleSave = useCallback(() => {
-		const leagueData = { id: id !== 'new' ? id! : `${leagueIdInput}-${selectedYear}-${Date.now()}`, leagueId: leagueIdInput, year: selectedYear, stats: { ...leagueBatterStats, r: 0, rbi: 0 } as ExtendedBatterStats };
+	const handleSave = useCallback(async () => {
+		const user = await db.getCurrentUser();
+		if (!user) {
+			if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+				const pendingData = { leagueIdInput, selectedYear, leagueBatterStats, leagueRunnerStats };
+				localStorage.setItem('pending_league_edit', JSON.stringify(pendingData));
+				navigate('/login');
+			}
+			return;
+		}
+		const actualId = id === 'new' ? (searchParams.get('from') || '') : id!;
+		const leagueData = { id: actualId, leagueId: leagueIdInput, year: selectedYear, stats: { ...leagueBatterStats, r: 0, rbi: 0 } };
 		try {
-			db.saveYearlyLeague(leagueData); setIsEditMode(false);
+			await db.saveYearlyLeague(leagueData); setIsEditMode(false);
 		} catch (e: any) { alert(e.message); }
 	}, [leagueBatterStats, selectedYear, leagueIdInput, id]);
 
@@ -87,7 +122,8 @@ function LeaguePage() {
 	const isMetaValid = leagueIdInput.trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
 
 	if (!id) return <LeagueSearchPage />;
-	if (id !== 'new' && !db.getYearlyLeagueById(id)) return <Div style={{ padding: '40px' }}>404 - 리그를 찾을 수 없습니다.</Div>;
+	if (isLoading) return <Div style={{ padding: '40px' }}>데이터를 불러오는 중...</Div>;
+	if (id !== 'new' && !yearlyLeagueData) return <Div style={{ padding: '40px' }}>404 - 리그를 찾을 수 없습니다.</Div>;
 
 	return isEditMode ? (
 		<LeagueEditPage

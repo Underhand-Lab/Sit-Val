@@ -1,254 +1,326 @@
 import { League, YearlyLeague, Team, YearlyTeam, Player, YearlyPlayer, ExtendedBatterStats, YearlyLineup, RunnerStats } from '@packages/sit-val/types/Database';
+import { supabase } from './supabaseClient';
 
-const STORAGE_KEY = 'sit_val_db';
+const CACHE_PREFIX = 'sit_val_cache_';
+const memoryCache: Record<string, any> = {};
+
+const _getCache = (key: string) => {
+  if (memoryCache[key]) return memoryCache[key];
+  const stored = localStorage.getItem(CACHE_PREFIX + key);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored);
+      memoryCache[key] = parsed;
+      return parsed;
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+};
+
+const _setCache = (key: string, data: any) => {
+  memoryCache[key] = data;
+  localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(data));
+};
+
+const _clearCache = (key: string) => {
+  delete memoryCache[key];
+  localStorage.removeItem(CACHE_PREFIX + key);
+};
 
 /**
- * LocalStorage를 기반으로 한 간이 DB 서비스
- * 향후 Supabase/Firebase로 교체 가능하도록 Repository 패턴으로 확장 가능
+ * Supabase 기반 DB 서비스
+ * 모든 읽기 작업은 공개되어 있으며, 쓰기/편집은 RLS(Row Level Security)를 통해 
+ * 로그인한 이용자(creatorId가 본인인 경우)만 가능하도록 처리됩니다.
  */
 export const db = {
-  saveData: (key: string, data: any) => {
-    const currentDb = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    currentDb[key] = data;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(currentDb));
+  // 동기적 캐시 접근 (초기 State 설정용)
+  getSyncCache: (key: string) => _getCache(key),
+
+  // 인증 시스템 연동
+  getCurrentUser: async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    return user;
   },
 
-  getData: (key: string): any[] => {
-    const currentDb = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    return currentDb[key] || [];
+  updateNickname: async (nickname: string) => {
+    const { data, error } = await supabase.auth.updateUser({
+      data: { nickname }
+    });
+    if (error) throw error;
+    return data;
   },
 
-  // Mock 인증 시스템 (테스트용)
-  getCurrentUser: () => {
-    // 실제 구현 시에는 Firebase Auth나 Supabase Auth 연동
-    return { id: 'user_123', name: '테스트 사용자' };
+  signOut: async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   },
 
   // 리그 관련
-  getLeagues: () => db.getData('leagues') as League[],
-  getYearlyLeagues: (leagueId: string) => 
-    (db.getData('yearlyLeagues') as YearlyLeague[]).filter(yl => yl.leagueId === leagueId),
+  getLeagues: async () => {
+    const { data, error } = await supabase.from('leagues').select('*');
+    if (error) throw error;
+    return data as League[];
+  },
+
+  getYearlyLeagues: async (leagueId: string) => {
+    const cacheKey = `yearlyLeagues_${leagueId}`;
+    const cached = _getCache(cacheKey);
+    if (cached) return cached as YearlyLeague[];
+
+    const { data, error } = await supabase
+      .from('yearly_leagues')
+      .select('*')
+      .eq('leagueId', leagueId);
+    if (error) throw error;
+    _setCache(cacheKey, data);
+    return data as YearlyLeague[];
+  },
   
-  // 저장 또는 업데이트 (소유권 확인)
-  saveYearlyLeague: (data: Omit<YearlyLeague, 'creatorId'>) => {
-    const user = db.getCurrentUser();
+  getAllYearlyLeagues: async () => {
+    const cached = _getCache('allYearlyLeagues');
+    if (cached) return cached as YearlyLeague[];
+
+    const { data, error } = await supabase.from('yearly_leagues').select('*');
+    if (error) throw error;
+    _setCache('allYearlyLeagues', data);
+    return data as YearlyLeague[];
+  },
+
+  saveYearlyLeague: async (data: Omit<YearlyLeague, 'creatorId'>) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
-    const list = db.getData('yearlyLeagues') as YearlyLeague[];
-    const existingIndex = list.findIndex(l => l.id === data.id);
+    const existing = await db.getYearlyLeagueById(data.id);
 
-    if (existingIndex !== -1 && list[existingIndex].creatorId === user.id) {
-      // 내 데이터면 수정 (Modify)
-      list[existingIndex] = { ...data, creatorId: user.id };
-      db.saveData('yearlyLeagues', list);
+    if (existing && existing.creatorId === user.id) {
+      const { error } = await supabase
+        .from('yearly_leagues')
+        .update({ ...data, creatorId: user.id })
+        .eq('id', data.id);
+      if (error) throw error;
+      _clearCache(`yearlyLeagues_${data.leagueId}`);
+      _clearCache('allYearlyLeagues');
       return { mode: 'modify', id: data.id };
     } else {
-      // 타인 데이터거나 새 데이터면 포크/신규 저장 (Fork)
       const newId = `${data.leagueId}-${data.year}-${Date.now()}`;
-      const newList = [...list, { ...data, id: newId, creatorId: user.id }];
-      db.saveData('yearlyLeagues', newList);
+      const { error } = await supabase
+        .from('yearly_leagues')
+        .insert([{ ...data, id: newId, creatorId: user.id }]);
+      if (error) throw error;
+      _clearCache(`yearlyLeagues_${data.leagueId}`);
+      _clearCache('allYearlyLeagues');
       return { mode: 'fork', id: newId };
     }
   },
 
-  deleteYearlyLeague: (id: string) => {
-    const user = db.getCurrentUser();
+  deleteYearlyLeague: async (id: string) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
-    let list = db.getData('yearlyLeagues') as YearlyLeague[];
-    const itemToDelete = list.find(l => l.id === id);
-    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
-      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
-    }
-    list = list.filter(l => l.id !== id);
-    db.saveData('yearlyLeagues', list);
-  },
-  getYearlyLeagueById: (id: string) => {
-    const list = db.getData('yearlyLeagues') as YearlyLeague[];
-    return list.find(yl => yl.id === id);
+    const item = await db.getYearlyLeagueById(id);
+
+    const { error } = await supabase
+      .from('yearly_leagues')
+      .delete()
+      .eq('id', id)
+      .eq('creatorId', user.id);
+    if (error) throw error;
+    if (item) _clearCache(`yearlyLeagues_${item.leagueId}`);
+    _clearCache('allYearlyLeagues');
   },
 
-  getYearlyPlayerById: (id: string) => {
-    const list = db.getData('yearlyPlayers') as YearlyPlayer[];
-    return list.find(p => p.id === id);
+  getYearlyLeagueById: async (id: string) => {
+    const { data } = await supabase.from('yearly_leagues').select('*').eq('id', id).maybeSingle();
+    return data as YearlyLeague | null;
   },
 
-  // 저장 또는 업데이트 (소유권 확인)
-  saveYearlyPlayer: (data: Omit<YearlyPlayer, 'creatorId'> & { name?: string }) => {
-    const user = db.getCurrentUser();
+  getYearlyPlayerById: async (id: string) => {
+    const { data } = await supabase.from('yearly_players').select('*').eq('id', id).maybeSingle();
+    return data as YearlyPlayer | null;
+  },
+
+  saveYearlyPlayer: async (data: Omit<YearlyPlayer, 'creatorId'> & { name?: string }) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
-    // 마스터 선수 정보 업데이트 (이름 유실 방지)
-    if (data.name) {
-      const players = db.getData('players') as Player[];
-      const pIdx = players.findIndex(p => p.id === data.playerId);
-      if (pIdx !== -1) {
-        players[pIdx].name = data.name;
-      } else {
-        players.push({ id: data.playerId, name: data.name });
-      }
-      db.saveData('players', players);
+    const { name, ...tableData } = data;
+
+    if (name) {
+      await supabase.from('players').upsert({ id: data.playerId, name });
     }
 
-    const list = db.getData('yearlyPlayers') as YearlyPlayer[];
-    const existingIndex = list.findIndex(p => p.id === data.id);
+    const existing = await db.getYearlyPlayerById(data.id);
 
-    if (existingIndex !== -1 && list[existingIndex].creatorId === user.id) {
-      // 내 데이터면 수정 (Modify)
-      list[existingIndex] = { ...data, creatorId: user.id };
-      db.saveData('yearlyPlayers', list);
+    if (existing && existing.creatorId === user.id) {
+      const { error } = await supabase
+        .from('yearly_players')
+        .update({ ...tableData, creatorId: user.id })
+        .eq('id', data.id);
+      if (error) throw error;
+      _clearCache('allYearlyPlayersWithNames');
       return { mode: 'modify', id: data.id };
     } else {
-      // 타인 데이터거나 새 데이터면 포크/신규 저장 (Fork)
       const newId = `${data.playerId}-${data.year}-${Date.now()}`;
-      const newList = [...list, { ...data, id: newId, creatorId: user.id }];
-      db.saveData('yearlyPlayers', newList);
+      const { error } = await supabase
+        .from('yearly_players')
+        .insert([{ ...tableData, id: newId, creatorId: user.id }]);
+      if (error) throw error;
+      _clearCache('allYearlyPlayersWithNames');
       return { mode: 'fork', id: newId };
     }
   },
 
-  deleteYearlyPlayer: (id: string) => {
-    const user = db.getCurrentUser();
+  deleteYearlyPlayer: async (id: string) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
-    let list = db.getData('yearlyPlayers') as YearlyPlayer[];
-    const itemToDelete = list.find(p => p.id === id);
-    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
-      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
+    const { error } = await supabase
+      .from('yearly_players')
+      .delete()
+      .eq('id', id)
+      .eq('creatorId', user.id);
+    if (error) throw error;
+    _clearCache('allYearlyPlayersWithNames');
+  },
+
+  saveLineupRunnerStats: async (stats: RunnerStats) => {
+    // 사용자별 주자 통계 설정 저장 (사용자 정보가 있을 때만)
+    const user = await db.getCurrentUser();
+    if (user) {
+      await supabase.from('user_settings').upsert({ user_id: user.id, runner_stats: stats });
     }
-    list = list.filter(p => p.id !== id);
-    db.saveData('yearlyPlayers', list);
   },
 
-  // 라인업 주자 설정 관련
-  saveLineupRunnerStats: (stats: RunnerStats) => {
-    db.saveData('lineupRunnerStats', [stats]);
+  getLineupRunnerStats: async (): Promise<RunnerStats | null> => {
+    const user = await db.getCurrentUser();
+    if (!user) return null;
+    const { data } = await supabase.from('user_settings').select('runner_stats').eq('user_id', user.id).maybeSingle();
+    return data?.runner_stats || null;
   },
 
-  getLineupRunnerStats: (): RunnerStats | null => {
-    const list = db.getData('lineupRunnerStats') as RunnerStats[];
-    return list.length > 0 ? list[0] : null;
+  getYearlyLineupById: async (id: string) => {
+    const { data } = await supabase.from('yearly_lineups').select('*').eq('id', id).maybeSingle();
+    return data as YearlyLineup | null;
   },
 
-  getYearlyLineupById: (id: string) => {
-    const list = db.getData('yearlyLineups') as YearlyLineup[];
-    return list.find(l => l.id === id);
+  getAllYearlyLineups: async () => {
+    const cached = _getCache('allYearlyLineups');
+    if (cached) return cached as YearlyLineup[];
+
+    const { data, error } = await supabase.from('yearly_lineups').select('*');
+    if (error) throw error;
+    _setCache('allYearlyLineups', data);
+    return data as YearlyLineup[];
   },
 
-  saveYearlyLineup: (data: Omit<YearlyLineup, 'creatorId'>) => {
-    const user = db.getCurrentUser();
+  saveYearlyLineup: async (data: Omit<YearlyLineup, 'creatorId'>) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
-    const list = db.getData('yearlyLineups') as YearlyLineup[];
-    const existingIndex = list.findIndex(l => l.id === data.id);
-    if (existingIndex !== -1 && list[existingIndex].creatorId === user.id) {
-      list[existingIndex] = { ...data, creatorId: user.id };
-      db.saveData('yearlyLineups', list);
+    
+    const existing = await db.getYearlyLineupById(data.id);
+    if (existing && existing.creatorId === user.id) {
+      const { error } = await supabase
+        .from('yearly_lineups')
+        .update({ ...data, creatorId: user.id })
+        .eq('id', data.id);
+      if (error) throw error;
+      _clearCache('allYearlyLineups');
       return { mode: 'modify', id: data.id };
     }
+    
     const newId = `lineup-${Date.now()}`;
-    db.saveData('yearlyLineups', [...list, { ...data, id: newId, creatorId: user.id }]);
+    const { error } = await supabase.from('yearly_lineups').insert([{ ...data, id: newId, creatorId: user.id }]);
+    if (error) throw error;
+    _clearCache('allYearlyLineups');
     return { mode: 'fork', id: newId };
   },
 
-  deleteYearlyLineup: (id: string) => {
-    const user = db.getCurrentUser();
+  deleteYearlyLineup: async (id: string) => {
+    const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
-    let list = db.getData('yearlyLineups') as YearlyLineup[];
-    const itemToDelete = list.find(l => l.id === id);
-    if (!itemToDelete || itemToDelete.creatorId !== user.id) {
-      throw new Error('삭제 권한이 없거나 항목을 찾을 수 없습니다.');
-    }
-    list = list.filter(l => l.id !== id);
-    db.saveData('yearlyLineups', list);
+    const { error } = await supabase.from('yearly_lineups').delete().eq('id', id).eq('creatorId', user.id);
+    if (error) throw error;
+    _clearCache('allYearlyLineups');
   },
 
-  // 통합 검색 기능
-  search: (query: string) => {
-    const q = query.toLowerCase();
-    const players = (db.getData('players') as Player[]).filter(p => p.name.toLowerCase().includes(q));
-    // Note: yearlyPlayers are not directly searchable by name here, but by their associated player's name.
-    // If direct search on yearlyPlayers is needed, it would require joining or pre-processing.
-    // For now, search returns base Player objects.
+  search: async (query: string) => {
+    const q = `%${query}%`;
+    const [playersRes, teamsRes, leaguesRes] = await Promise.all([
+      supabase.from('players').select('*').ilike('name', q),
+      supabase.from('teams').select('*').ilike('name', q),
+      supabase.from('yearly_leagues').select('*').or(`leagueId.ilike.${q},year.eq.${parseInt(query) || 0}`)
+    ]);
 
-    const teams = (db.getData('teams') as Team[]).filter(t => t.name.toLowerCase().includes(q));
-    const yearlyLeagues = (db.getData('yearlyLeagues') as YearlyLeague[]).filter(yl => 
-      yl.year.toString().includes(q) || yl.leagueId.toLowerCase().includes(q)
-    );
+    const players = playersRes.data || [];
+    const teams = teamsRes.data || [];
+    const yearlyLeagues = (leaguesRes.data as YearlyLeague[]) || [];
 
     return { players, teams, yearlyLeagues };
   },
 
-  // 특정 선수의 특정 연도 기록 및 해당 리그 기록 조회 (PersonalVisualizer용)
-  getYearlyPlayerData: (playerId: string, year: number) => {
-    const players = db.getData('players') as Player[];
-    const player = players.find(p => p.id === playerId);
+  getYearlyPlayerData: async (playerId: string, year: number) => {
+    const { data: player } = await supabase.from('players').select('*').eq('id', playerId).maybeSingle();
     if (!player) return null;
 
-    const yearlyPlayers = db.getData('yearlyPlayers') as YearlyPlayer[];
-    const playerStats = yearlyPlayers.find(p => p.playerId === playerId && p.year === year);
-    
+    const { data: playerStats } = await supabase.from('yearly_players').select('*').eq('playerId', playerId).eq('year', year).maybeSingle();
     if (!playerStats) return null;
 
-    // 해당 선수가 속한 팀의 리그 정보를 찾아 리그 평균 스탯 가져오기
-    const yearlyLeagues = db.getData('yearlyLeagues') as YearlyLeague[];
-    const leagueStats = yearlyLeagues.find(l => l.year === year && l.leagueId === 'kbo'); // Assuming KBO for now
+    const { data: leagueStats } = await supabase.from('yearly_leagues').select('*').eq('year', year).eq('leagueId', 'kbo').maybeSingle();
 
     return {
-      player, // Add player object
-      playerStats,
-      leagueStats
+      player: player as Player,
+      playerStats: playerStats as YearlyPlayer,
+      leagueStats: leagueStats as YearlyLeague
     };
   },
 
-  // 특정 연도의 모든 선수 기록과 기본 정보 조회
-  getPlayersWithYearlyStats: (year: number) => {
-    const allPlayers = db.getData('players') as Player[];
-    const allYearlyPlayers = db.getData('yearlyPlayers') as YearlyPlayer[];
+  getPlayersWithYearlyStats: async (year: number) => {
+    const { data, error } = await supabase
+      .from('yearly_players')
+      .select('*, players(name)')
+      .eq('year', year);
 
-    return allYearlyPlayers
-      .filter(yp => yp.year === year)
-      .map(yp => {
-        const playerInfo = allPlayers.find(p => p.id === yp.playerId);
-        return playerInfo ? { ...yp, name: playerInfo.name } : null;
-      })
-      .filter(Boolean) as (YearlyPlayer & { name: string })[];
+    if (error) throw error;
+    return data.map(yp => ({ ...yp, name: (yp.players as any).name })) as (YearlyPlayer & { name: string })[];
   },
 
-  // 팀 정보 및 소속 선수 목록 조회
-  getTeamWithPlayers: (teamId: string, year: number) => {
-    const yearlyTeams = db.getData('yearlyTeams') as YearlyTeam[];
-    const team = yearlyTeams.find(t => t.teamId === teamId && t.year === year);
-    
-    const yearlyPlayers = db.getData('yearlyPlayers') as YearlyPlayer[];
-    const players = yearlyPlayers.filter(p => p.yearlyTeamIds.includes(team?.id || ''));
+  getAllYearlyPlayersWithNames: async () => {
+    const cached = _getCache('allYearlyPlayersWithNames');
+    if (cached) return cached as (YearlyPlayer & { name: string })[];
 
-    return { team, players };
+    const { data, error } = await supabase
+      .from('yearly_players')
+      .select('*, players(name)');
+
+    if (error) throw error;
+    const result = data.map(yp => ({ ...yp, name: (yp.players as any).name })) as (YearlyPlayer & { name: string })[];
+    _setCache('allYearlyPlayersWithNames', result);
+    return result;
   },
 
-  // 선수 관련
-  getPlayers: () => db.getData('players') as Player[],
-  addPlayer: (player: Player) => {
-    const list = db.getData('players');
-    db.saveData('players', [...list, player]);
+  getTeamWithPlayers: async (teamId: string, year: number) => {
+    const { data: team } = await supabase.from('yearly_teams').select('*').eq('teamId', teamId).eq('year', year).maybeSingle();
+    const { data: players } = await supabase.from('yearly_players').select('*').contains('yearlyTeamIds', [team?.id || '']);
+
+    return { team: team as YearlyTeam, players: players as YearlyPlayer[] };
   },
 
-  // 특정 연도/리그의 선수 통계 조회
-  getYearlyPlayers: (year: number) => {
-    const yearlyPlayers = db.getData('yearlyPlayers') as YearlyPlayer[];
-    return yearlyPlayers.filter(p => p.year === year);
+  getPlayers: async () => {
+    const { data } = await supabase.from('players').select('*');
+    return data as Player[];
   },
-
-  /**
-   * 초기 Mock 데이터 주입 (테스트용)
-   */
-  seed: () => {
-    if (db.getLeagues().length === 0) {
-      db.saveData('leagues', [{ id: 'kbo', name: 'KBO 리그' }]);
-      console.log('Seed data initialized');
-    }
+  addPlayer: async (player: Player) => {
+    await supabase.from('players').insert([player]);
+  },
+  getYearlyPlayers: async (year: number) => {
+    const { data } = await supabase.from('yearly_players').select('*').eq('year', year);
+    return data as YearlyPlayer[];
+  },
+  seed: async () => {
+    // Supabase 환경에서는 필요시 SQL Editor나 별도 스크립트로 처리합니다.
+    console.log('Seed should be handled via Supabase Dashboard/SQL');
   }
 };
-
-// 앱 시작 시 시드 데이터 로드
-db.seed();

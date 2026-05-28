@@ -1,11 +1,11 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Div, FixedFooter, Button, BottomSheet, vars, InputNumber, Select } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
 import BatterInput from '@sit-val/components/BatterInput';
 import { db } from '../../services/db';
-import { YearlyPlayer } from '@packages/sit-val/types/Database';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { VisualizerList } from '../../common/components/VisualizerList';
 
 interface PlayerEditPageProps {
@@ -15,7 +15,7 @@ interface PlayerEditPageProps {
   setPlayerName: (name: string) => void;
   selectedYear: number;
   setSelectedYear: (year: number) => void;
-  currentBatterStats: BatterStatsData;
+  currentBatterStats: BatterStats;
   setCurrentBatterStats: (stats: BatterStatsData) => void;
   yearlyLeagueId: string;
   setYearlyLeagueId: (id: string) => void;
@@ -37,19 +37,33 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
   const [isMetaOpen, setIsMetaOpen] = useState(false);
   const [isBatterInputOpen, setIsBatterInputOpen] = useState(false);
   const [leagueSearch, setLeagueSearch] = useState('');
+  const [yearlyLeagues, setYearlyLeagues] = useState<YearlyLeague[]>([]);
 
-  const handleSave = useCallback(() => {
+  useEffect(() => {
+    db.getAllYearlyLeagues().then(setYearlyLeagues);
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    const user = await db.getCurrentUser();
+    if (!user) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+        const pendingData = { playerName, selectedYear, currentBatterStats, yearlyLeagueId, playerYearlyStats };
+        localStorage.setItem('pending_player_edit', JSON.stringify(pendingData));
+        navigate('/login');
+      }
+      return;
+    }
     const playerIdToUse = playerYearlyStats?.playerId || `player-${Date.now()}`;
     const dataToSave = { 
       ...(playerYearlyStats || { playerId: playerIdToUse, yearlyTeamIds: [] }), 
-      id: id !== 'new' ? id! : '', 
+      id: playerYearlyStats?.id || '', 
       year: selectedYear, 
       stats: { ...currentBatterStats, r: 0, rbi: 0 }, 
       name: playerName,
       yearlyLeagueId: yearlyLeagueId || undefined
     };
     try {
-      const res = db.saveYearlyPlayer(dataToSave as any);
+      const res = await db.saveYearlyPlayer(dataToSave);
       navigate(`/player/${res.id}`);
     } catch (e: any) { alert(e.message); }
   }, [playerYearlyStats, currentBatterStats, selectedYear, playerName, yearlyLeagueId, id, navigate]);
@@ -101,7 +115,7 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
               style={{ width: '100%' }}
               options={[
                 { label: '선택 안함', value: '' },
-                ...db.getData('yearlyLeagues')
+                ...yearlyLeagues
                   .filter((l: any) => 
                     l.leagueId.toLowerCase().includes(leagueSearch.toLowerCase()) || 
                     l.year.toString().includes(leagueSearch)
