@@ -1,32 +1,118 @@
-import React from 'react'
-import { Div, Box, Wrapper } from '@shared/bridges/UIBridge'
+import React, { useState, useEffect, useMemo } from 'react';
+import { Div, Box, Wrapper, H3, vars, Button } from '@shared/bridges/UIBridge';
+import { useNavigate } from 'react-router-dom';
+import { db } from '../services/db';
+import * as Hangul from 'hangul-js';
 
 const HomePage: React.FC = () => {
-  return (
-    <Wrapper >
-      <Div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px' }}>
-        <Box className="container">
-          <h1>🚩 소개</h1>
-          <hr />
-          <p>Sit-Val은 Situation-based Value model의 약어로, 야구 경기에서 발생하는 타격 결과를 주자, 아웃, 득점 상태를 포함한 상황으로 해석하고, 각 결과가 만들어내는 기대 득점 변화를 정량화하는 모델입니다.</p>
-          <p>주자의 능력(조건부 확률)을 기반으로 타격 결과에 따른 주자 상태, 아웃 카운트, 득점 상태의 전이를 모델링하고, 상태 전이 모델과 타격 결과 분포를 이용하여 각 상황에서의 기대 득점(Expected Runs) 계산합니다. 계산된 기대 득점을 기반으로 다양한 분석 기능을 제공합니다.</p>
-        </Box>
-        <Box className="container">
-          <h1 id="-">📞 연락</h1>
-          <hr />
-          <p>추가 기능 제안, 오류 제보, 기타 문의 등은 아래의 이메일 주소로 보내주시길 바랍니다.</p>
-          <ul>
-            <li>✉︎: skysea001010@naver.com</li>
-          </ul>
-          <hr />
-          <p>다른 프로젝트를 보고 싶다면 아래의 링크에서 확인해주세요.</p>
-          <ul>
-            <li><a href="https://underhand-lab.github.io/">Underhand-Lab</a></li>
-          </ul>
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [leagues, setLeagues] = useState<any[]>([]);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [lineups, setLineups] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-        </Box>
+  useEffect(() => {
+    const fetchAllData = async () => {
+      setIsLoading(true);
+      try {
+        const [lg, pl, li] = await Promise.all([
+          db.getAllYearlyLeagues(),
+          db.getAllYearlyPlayersWithNames(),
+          (db as any).getAllYearlyLineups ? (db as any).getAllYearlyLineups() : [] // 라인업 가져오기 (메서드 존재 가정)
+        ]);
+        setLeagues(lg);
+        setPlayers(pl);
+        setLineups(li);
+      } catch (e) {
+        console.error("데이터 로드 중 오류:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchAllData();
+  }, []);
+
+  const filterItem = (item: any, term: string) => {
+    if (!term) return true;
+    const lowerTerm = term.toLowerCase();
+    const nameMatch = (item.name || item.leagueId || '') && Hangul.search(item.name || item.leagueId || '', term) >= 0;
+    const yearMatch = item.year?.toString().includes(lowerTerm);
+    return nameMatch || yearMatch;
+  };
+
+  const filteredLeagues = useMemo(() => leagues.filter(l => filterItem(l, searchTerm)).slice(0, 5), [leagues, searchTerm]);
+  const filteredPlayers = useMemo(() => players.filter(p => filterItem(p, searchTerm)).slice(0, 5), [players, searchTerm]);
+  const filteredLineups = useMemo(() => lineups.filter(l => filterItem(l, searchTerm)).slice(0, 5), [lineups, searchTerm]);
+
+  const renderListSection = (title: string, items: any[], path: string, type: 'league' | 'player' | 'lineup') => (
+    <Div style={{ width: '100%' }}>
+      <Div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+        <H3 style={{ margin: 0 }}>{title}</H3>
+        <Button onClick={() => navigate(`/${type}`)} style={{ padding: '4px 12px', fontSize: '12px' }}>전체보기</Button>
       </Div>
-    </Wrapper>
-  )
-}
-export default HomePage
+      <Div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {items.length > 0 ? items.map(item => (
+          <Div
+            key={item.id}
+            onClick={() => navigate(`/${type}/${item.id}`)}
+            style={{
+              padding: '12px',
+              backgroundColor: vars.surface,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>{item.year} {item.name || item.leagueId}</span>
+            <span style={{ fontSize: '12px', opacity: 0.5 }}>{item.id.split('-')[0]}...</span>
+          </Div>
+        )) : (
+          <p style={{ opacity: 0.5, fontSize: '12px', textAlign: 'center' }}>데이터가 없습니다.</p>
+        )}
+      </Div>
+    </Div>
+  );
+
+  return (
+    <Div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', width: '100%', boxSizing: 'border-box' }}>
+      {/* 통합 검색 바 */}
+      <Box style={{ padding: '20px', textAlign: 'center', width: '100%', boxSizing: 'border-box' }}>
+        <H3 style={{ marginBottom: '20px' }}>어떤 분석을 찾으시나요?</H3>
+        <input
+          type="text"
+          placeholder="리그, 선수, 라인업 검색 (이름 또는 연도)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '15px',
+            borderRadius: '12px',
+            border: `1px solid ${vars.surface}`,
+            backgroundColor: vars.background,
+            color: vars.text,
+            fontSize: '16px',
+            boxSizing: 'border-box'
+          }}
+        />
+      </Box>
+      <Box className="container" style={{ width: '100%', boxSizing: 'border-box', padding: '30px' }}>
+        {isLoading ? (
+          <p style={{ textAlign: 'center', padding: '40px' }}>데이터를 불러오는 중...</p>
+        ) : (
+          <Div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+            {renderListSection('리그 분석', filteredLeagues, '/league', 'league')}
+            <hr style={{ border: 'none', borderTop: `1px solid ${vars.surface}` }} />
+            {renderListSection('선수 분석', filteredPlayers, '/player', 'player')}
+            <hr style={{ border: 'none', borderTop: `1px solid ${vars.surface}` }} />
+            {renderListSection('라인업 분석', filteredLineups, '/lineup', 'lineup')}
+          </Div>
+        )}
+      </Box>
+    </Div>
+  );
+};
+
+export default HomePage;
