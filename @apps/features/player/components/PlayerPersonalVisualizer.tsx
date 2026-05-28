@@ -28,7 +28,8 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
   const calculateWoba = () => {
-    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = stats;
+    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr } = stats;
+    const pa = stats.pa; // getter 명시적 호출
     if (!pa) return 0;
     const numerator =
       (bb * (weights.bb || 0)) +
@@ -80,7 +81,7 @@ const PlayerPersonalVisualizer: React.FC<PlayerPersonalVisualizerProps> = ({ dat
           <StatItem label="wRAA (표준)" value={(wraa > 0 ? '+' : '') + wraa.toFixed(2)} color={wraa >= 0 ? '#e74c3c' : '#3498db'} />
           <StatItem label="wRAA (커스텀)" value={(wraaCustom > 0 ? '+' : '') + wraaCustom.toFixed(2)} color={wraaCustom >= 0 ? '#e74c3c' : '#3498db'} />
           <StatItem label="wRC+ (커스텀)" value={Math.round(wrcPlusCustom)} color={vars.primary} />
-          <StatItem label="타석당 가치" value={(wraaCustom / (batterStats.pa || 1)).toFixed(3)} color={vars.primary} />
+          <StatItem label="타석당 가치" value={(wraaCustom / (stats.pa || 1)).toFixed(3)} color={vars.primary} />
         </Div>
         <p style={{ fontSize: '0.85em', color: vars.text, marginTop: '10px' }}>
           ※ 해당 선수의 성적을 바탕으로 리그 환경 대비 가치를 산출한 결과입니다.

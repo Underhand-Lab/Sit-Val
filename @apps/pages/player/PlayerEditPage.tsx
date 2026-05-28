@@ -56,12 +56,13 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
     }
     const playerIdToUse = playerYearlyStats?.playerId || `player-${Date.now()}`;
     const dataToSave = { 
-      ...(playerYearlyStats || { playerId: playerIdToUse, yearlyTeamIds: [] }), 
-      id: playerYearlyStats?.id || '', 
-      year: selectedYear, 
-      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), r: 0, rbi: 0 } as any, 
+      id: playerYearlyStats?.id || '',
+      playerId: playerIdToUse,
+      year: selectedYear,
+      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), r: 0, rbi: 0 } as any,
       name: playerName || '',
-      yearlyLeagueId: yearlyLeagueId || undefined
+      yearlyLeagueId: yearlyLeagueId || null,
+      yearlyTeamIds: playerYearlyStats?.yearlyTeamIds || ([] as string[])
     };
     try {
       const res = await db.saveYearlyPlayer(dataToSave);

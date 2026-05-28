@@ -149,24 +149,31 @@ export const db = {
     // 이름 정보가 유효한 최신 형식의 캐시인 경우에만 반환합니다.
     if (cached && (cached as any).name && (cached as any).name !== '알 수 없음') return cached as YearlyPlayer & { name: string };
 
-    const { data } = await supabase
+    const { data: ypData, error: ypError } = await supabase
       .from('yearly_players')
-      .select('*, players(name)')
+      .select('*') // 조인 문구가 절대 포함되지 않도록 확인
       .eq('id', id)
       .maybeSingle();
 
-    if (data) {
-      // Join 데이터가 배열인 경우와 객체인 경우를 모두 대응합니다.
-      const playersData = data.players as any;
-      const name = Array.isArray(playersData) ? playersData[0]?.name : playersData?.name;
-      const result = { ...data, name: name || '알 수 없음' };
+    if (ypError) throw ypError;
+    if (!ypData) return null;
+
+    if (ypData) {
+      // Join을 사용하는 대신 별도 쿼리로 이름을 가져옵니다 (DB에 Foreign Key 제약조건이 없는 경우 대응)
+      const { data: pData } = await supabase
+        .from('players')
+        .select('name')
+        .eq('id', ypData.playerId)
+        .maybeSingle();
+
+      const name = pData?.name || '알 수 없음';
+      const result = { ...ypData, name };
       _setCache(cacheKey, result);
       return result as YearlyPlayer & { name: string };
     }
-    return null;
   },
 
-  saveYearlyPlayer: async (data: Omit<YearlyPlayer, 'creatorId'> & { name?: string }) => {
+  saveYearlyPlayer: async (data: Omit<YearlyPlayer, 'creatorId' | 'yearlyLeagueId'> & { name?: string; playerId: string; yearlyLeagueId?: string | null }) => {
     const user = await db.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');
 
@@ -176,7 +183,7 @@ export const db = {
       await supabase.from('players').upsert({ id: data.playerId, name });
     }
 
-    const existing = await db.getYearlyPlayerById(data.id);
+    const existing = data.id ? await db.getYearlyPlayerById(data.id) : null;
 
     if (existing && existing.creatorId === user.id) {
       const { error } = await supabase
@@ -315,33 +322,40 @@ export const db = {
   },
 
   getPlayersWithYearlyStats: async (year: number) => {
-    const { data, error } = await supabase
-      .from('yearly_players')
-      .select('*, players(name)')
-      .eq('year', year);
+    const [ypRes, pRes] = await Promise.all([
+      supabase.from('yearly_players').select('*').eq('year', year),
+      supabase.from('players').select('id, name')
+    ]);
 
-    if (error) throw error;
-    return data.map(yp => {
-      const playersData = yp.players as any;
-      const name = Array.isArray(playersData) ? playersData[0]?.name : playersData?.name;
-      return { ...yp, name: name || '알 수 없음' };
-    }) as (YearlyPlayer & { name: string })[];
+    if (ypRes.error) { console.error('getPlayersWithYearlyStats Error:', ypRes.error); throw ypRes.error; }
+    if (pRes.error) { console.warn('Player names fetch failed:', pRes.error); }
+    
+    const players = pRes.data || [];
+
+    return (ypRes.data || []).map(yp => ({
+      ...yp,
+      name: players.find(p => p.id === yp.playerId)?.name || (yp as any).name || '알 수 없음'
+    })) as (YearlyPlayer & { name: string })[];
   },
 
   getAllYearlyPlayersWithNames: async () => {
     const cached = _getCache('allYearlyPlayersWithNames');
     if (cached) return cached as (YearlyPlayer & { name: string })[];
 
-    const { data, error } = await supabase
-      .from('yearly_players')
-      .select('*, players(name)');
+    const [ypRes, pRes] = await Promise.all([
+      supabase.from('yearly_players').select('*'),
+      supabase.from('players').select('id, name')
+    ]);
 
-    if (error) throw error;
-    const result = data.map(yp => {
-      const playersData = yp.players as any;
-      const name = Array.isArray(playersData) ? playersData[0]?.name : playersData?.name;
-      return { ...yp, name: name || '알 수 없음' };
-    }) as (YearlyPlayer & { name: string })[];
+    if (ypRes.error) { console.error('getAllYearlyPlayersWithNames Error:', ypRes.error); throw ypRes.error; }
+    if (pRes.error) { console.warn('Player names fetch failed:', pRes.error); }
+
+    const players = pRes.data || [];
+
+    const result = (ypRes.data || []).map(yp => ({
+      ...yp,
+      name: players.find(p => p.id === yp.playerId)?.name || (yp as any).name || '알 수 없음'
+    })) as (YearlyPlayer & { name: string })[];
     _setCache('allYearlyPlayersWithNames', result);
     return result;
   },

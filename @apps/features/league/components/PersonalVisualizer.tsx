@@ -31,7 +31,8 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
 
   const calculateWoba = () => {
     if (!weights || !stats) return 0;
-    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = stats;
+    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr } = stats;
+    const pa = stats.pa; // getter 명시적 호출
     if (!pa) return 0;
     const numerator =
       (bb * (weights.bb || 0)) +
@@ -111,7 +112,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
             <Div style={{ textAlign: 'center', padding: '10px', borderTop: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em', }}>타석당 득점 가치</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.primary }}>
-                {(wraaCustom / (batterStats.pa || 1)).toFixed(3)}
+                {(wraaCustom / (stats.pa || 1)).toFixed(3)}
               </Div>
             </Div>
           </Div>

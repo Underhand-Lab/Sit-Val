@@ -81,7 +81,7 @@ const PlayerPage: React.FC = () => {
         setCurrentBatterStats(cached.stats || INITIAL_BATTER_STATS);
         setSelectedYear(cached.year);
         setYearlyLeagueId(cached.yearlyLeagueId || '');
-        if ((cached as any).name) {
+        if ((cached as any).name !== undefined && (cached as any).name !== null) { // 이름이 유효한 경우에만 설정
           setPlayerName((cached as any).name);
           setIsLoading(false); // 이름 정보가 확실히 있을 때만 로딩을 종료합니다.
         }
