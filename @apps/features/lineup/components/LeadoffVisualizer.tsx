@@ -1,4 +1,5 @@
 import React from 'react';
+import { vars } from '@shared/bridges/UIBridge';
 
 interface LeadoffVisualizerProps {
   // leadoff_vector는 각 타순별 이닝 시작 횟수를 담은 배열입니다.
@@ -14,9 +15,9 @@ const LeadoffVisualizer: React.FC<LeadoffVisualizerProps> = ({ data }) => {
       <table className="leadoff-table">
         <thead>
           <tr>
-            <th>타순</th>
-            <th>시작 확률</th>
-            <th>시작 횟수</th>
+            <th style={{ backgroundColor: vars.background }}>타순</th>
+            <th style={{ backgroundColor: vars.background }}>시작 확률</th>
+            <th style={{ backgroundColor: vars.background }}>시작 횟수</th>
           </tr>
         </thead>
         <tbody>

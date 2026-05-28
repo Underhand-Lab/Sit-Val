@@ -1,7 +1,7 @@
-import React, { useState, useImperativeHandle, forwardRef, useEffect, ChangeEvent } from 'react';
+import React, { useState, useImperativeHandle, forwardRef, useEffect, ChangeEvent, useMemo } from 'react';
 import { InputNumber } from '@shared/bridges/UIBridge';
 
-import { BatterStatsData } from '../types/BatterStats';
+import { BatterStatsData, BatterStats } from '../types/BatterStats';
 
 export interface BatterInputHandle {
   setData: (newData: BatterStatsData) => void;
@@ -25,19 +25,7 @@ interface BatterInputProps {
 }
 
 const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataChange, id, initialStats }, ref) => {
-  const [stats, setStats] = useState<BatterStatsData>(initialStats || {
-    bb: 111,
-    '1B': 65,
-    '2B': 23,
-    '3B': 0,
-    hr: 56,
-    go: 117,
-    fo: 135,
-    so: 89,
-    sf: 0,
-    sh: 0,
-    hbp: 0,
-  });
+  const [stats, setStats] = useState<BatterStatsData>(initialStats ? { ...initialStats } : new BatterStats());
 
   // initialStats prop이 변경될 때마다 내부 stats 상태를 업데이트
   useEffect(() => {
@@ -46,18 +34,16 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
     }
   }, [initialStats]);
 
-  // 지표 기반 자동 계산 로직
-  const hits = (stats['1B'] || 0) + (stats['2B'] || 0) + (stats['3B'] || 0) + (stats.hr || 0);
-  // 뜬공(fo)에 희생플라이(sf)가 포함되어 있으므로 타수(AB) 계산 시 sf를 제외함
-  const ab_outs = (stats.so || 0) + (stats.go || 0) + ((stats.fo || 0) - (stats.sf || 0));
-  const ab = hits + ab_outs;
-  
-  // PA가 객체에 없을 경우 직접 계산 (LeaguePage 로직과 동일)
-  const calculatedPa = hits + (stats.bb || 0) + (stats.hbp || 0) + (stats.so || 0) + (stats.go || 0) + (stats.fo || 0) + (stats.sh || 0);
-  const pa = stats.pa || calculatedPa;
+  // BatterStats 인스턴스를 통해 pa 자동 계산 활용
+  const statsInstance = useMemo(() => new BatterStats(stats), [stats]);
+  const pa = statsInstance.pa;
 
-  const ob = hits + (stats.bb || 0) + (stats.hbp || 0);
-  const tb = (stats['1B'] || 0) + (stats['2B'] || 0) * 2 + (stats['3B'] || 0) * 3 + (stats.hr || 0) * 4;
+  const hits = (statsInstance['1B'] || 0) + (statsInstance['2B'] || 0) + (statsInstance['3B'] || 0) + (statsInstance.hr || 0);
+  const ab_outs = (statsInstance.so || 0) + (statsInstance.go || 0) + ((statsInstance.fo || 0) - (statsInstance.sf || 0));
+  const ab = hits + ab_outs;
+
+  const ob = hits + (statsInstance.bb || 0) + (statsInstance.hbp || 0);
+  const tb = (statsInstance['1B'] || 0) + (statsInstance['2B'] || 0) * 2 + (statsInstance['3B'] || 0) * 3 + (statsInstance.hr || 0) * 4;
 
   const avg = ab > 0 ? hits / ab : 0;
   const obp = pa > 0 ? ob / pa : 0;
@@ -66,18 +52,18 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
 
   useImperativeHandle(ref, (): BatterInputHandle => ({
     setData: (newData) => setStats(newData),
-    getAbilityRaw: () => ({ ...stats, pa } as BatterStatsData),
+    getAbilityRaw: () => statsInstance,
     getAbility: () => {
-      const validPa = Math.max(1, pa);
+      const validPa = Math.max(1, statsInstance.pa);
       return {
-        '1B': (stats['1B'] || 0) / validPa,
-        '2B': (stats['2B'] || 0) / validPa,
-        '3B': (stats['3B'] || 0) / validPa,
-        hr: (stats.hr || 0) / validPa,
-        bb: (stats.bb || 0) / validPa,
-        so: (stats.so || 0) / validPa,
-        go: (stats.go || 0) / validPa,
-        fo: (stats.fo || 0) / validPa,
+        '1B': (statsInstance['1B'] || 0) / validPa,
+        '2B': (statsInstance['2B'] || 0) / validPa,
+        '3B': (statsInstance['3B'] || 0) / validPa,
+        hr: (statsInstance.hr || 0) / validPa,
+        bb: (statsInstance.bb || 0) / validPa,
+        so: (statsInstance.so || 0) / validPa,
+        go: (statsInstance.go || 0) / validPa,
+        fo: (statsInstance.fo || 0) / validPa,
       };
     }
   }));
@@ -87,12 +73,11 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
     const val = parseFloat(value) || 0;
     
     const nextStats = { ...stats, [name]: val } as BatterStatsData;
+    // pa는 입력 값이 아니므로 명시적으로 제거하여 오동작 방지
+    delete nextStats.pa;
 
     setStats(nextStats);
-    if (onDataChange) onDataChange({ 
-        ...nextStats, 
-        pa: nextStats.pa || calculatedPa 
-    } as BatterStatsData);
+    if (onDataChange) onDataChange(nextStats);
   };
 
   return (

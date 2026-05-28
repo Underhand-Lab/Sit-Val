@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { Div, vars } from '@shared/bridges/UIBridge'
+import { db } from '../../services/db';
+import { supabase } from '../../services/supabaseClient';
 
 interface NavItemData {
     name: string;
@@ -8,9 +10,25 @@ interface NavItemData {
 }
 
 const Navigation = () => {
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        // 초기 로그인 상태 확인
+        db.getCurrentUser().then(user => setIsLoggedIn(!!user));
+
+        // 인증 상태 변화 감지 리스너 등록
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setIsLoggedIn(!!session);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
     const navItems: NavItemData[] = [
+        { name: '선수 분석', path: '/player' },
         { name: '리그 분석', path: '/league' },
         { name: '라인업 분석', path: '/lineup' },
+        { name: isLoggedIn ? '계정' : '로그인', path: isLoggedIn ? '/account' : '/login' },
     ];
 
     return (

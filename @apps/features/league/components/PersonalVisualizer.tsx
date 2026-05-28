@@ -1,7 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
-import { Box, Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RECalculationResult } from '../api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
 
@@ -22,16 +22,17 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   if (!data || !data[0] || !data[1]) return null;
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
-  // 컴포넌트 마운트 시 초기 데이터를 가져오는 로직 (필요한 경우)
-  // 이 로직은 sheet가 열려있을 때만 유효하므로 현재는 batterStats의 초기값 설정으로 대체되었습니다.
+  // 입력된 성적을 바탕으로 타석(PA) 등이 자동 계산되는 인스턴스 생성
+  const stats = useMemo(() => new BatterStats(batterStats), [batterStats]);
 
   const handleBatterChange = (newStats: BatterStatsData) => {
     setBatterStats(newStats);
   };
 
   const calculateWoba = () => {
-    if (!weights || !batterStats) return 0;
-    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr, pa } = batterStats;
+    if (!weights || !stats) return 0;
+    const { bb, hbp, '1B': b1, '2B': b2, '3B': b3, hr } = stats;
+    const pa = stats.pa; // getter 명시적 호출
     if (!pa) return 0;
     const numerator =
       (bb * (weights.bb || 0)) +
@@ -44,22 +45,22 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   };
 
   const calculateCustomWraa = () => {
-    if (!ret?.runValue || !batterStats) return 0;
+    if (!ret?.runValue || !stats) return 0;
     const rv = ret.runValue;
     const events = ['bb', 'hbp', '1B', '2B', '3B', 'hr', 'so', 'go', 'fo'];
     return events.reduce((acc, event) => {
-      return acc + (batterStats[event] || 0) * (rv[event]?.value || 0);
+      return acc + ((stats as any)[event] || 0) * (rv[event]?.value || 0);
     }, 0);
   };
 
   const personalWoba = calculateWoba();
   const personalWobaScaled = personalWoba * wOBAScale;
-  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (batterStats.pa || 0) : 0;
+  const wraa = wOBAScale > 0 ? ((personalWoba - lgWobaRaw) / wOBAScale) * (stats.pa || 0) : 0;
   const wraaCustom = calculateCustomWraa();
 
   const calculateWrcPlus = (currentWraa: number, currentRunPerPa: number) => {
-    if (!batterStats.pa || !currentRunPerPa) return 0;
-    return ((currentWraa / batterStats.pa) / currentRunPerPa + 1) * 100;
+    if (!stats.pa || !currentRunPerPa) return 0;
+    return ((currentWraa / stats.pa) / currentRunPerPa + 1) * 100;
   };
 
   const wrcPlus = calculateWrcPlus(wraa, runPerPa);
@@ -70,7 +71,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
     <Div className="result-personal">
       <H3 style={{ margin: '0 0 10px 0' }}>개인 타격 가치</H3>
       <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px'}}>
-        <Box>
+        <Div>
           <Div style={{ padding: '10px', display: 'flex', justifyContent: 'space-around', alignItems: 'center', textAlign: 'center' }}>
             <Div style={{ flex: 1 }}>
               <span style={{ fontSize: '0.85em', display: 'block', marginBottom: '5px' }}>가중 출루율 (wOBA)</span>
@@ -86,9 +87,9 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
               </Div>
             </Div>
           </Div>
-        </Box>
+        </Div>
 
-        <Box>
+        <Div>
           <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', }}>
             <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em' }}>wRAA (표준)</span>
@@ -111,11 +112,11 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
             <Div style={{ textAlign: 'center', padding: '10px', borderTop: '1px solid #eee' }}>
               <span style={{ fontSize: '0.8em', }}>타석당 득점 가치</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.primary }}>
-                {(wraaCustom / (batterStats.pa || 1)).toFixed(3)}
+                {(wraaCustom / (stats.pa || 1)).toFixed(3)}
               </Div>
             </Div>
           </Div>
-        </Box>
+        </Div>
       </Div>
 
       <Button className="neumorphism-Button" onClick={() => setIsBatterOpen(true)}>

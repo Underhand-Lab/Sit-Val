@@ -1,202 +1,170 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-
-import { Box, Div, Button, FixedFooter, BottomSheet } from '@shared/bridges/UIBridge';
-
-import * as TransitionEngine from '@sit-val/lib/transition-engine/'
+import { Div } from '@shared/bridges/UIBridge';
 import * as Calc from "@sit-val/lib/sabermetrics/calc";
-
-import VisualizerBox from '@sit-val/components/VisualizerBox';
-import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
-import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput';
-import Popup from '@shared/components/Modal'
-
-import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import * as TransitionEngine from '@sit-val/lib/transition-engine/';
+import { BatterStats, BatterStatsData } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { calculateRE, RECalculationResult } from '../features/league/api/re-league';
+import { db } from '../services/db';
 
-import Visualizer9RE from '../features/league/components/Visualizer9RE';
-import RE24Visualizer from '../features/league/components/RE24Visualizer';
 import LeagueVisualizer from '../features/league/components/LeagueVisualizer';
-import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
-import LeagueBigInningVisualizer from '../features/league/components/LeagueBigInningVisualizer';
 import PersonalVisualizer from '../features/league/components/PersonalVisualizer';
+import RunValueVisualizer from '../features/league/components/RunValueVisualizer';
 
-// 초기 상태를 상수로 분리하는 것이 좋습니다.
-const INITIAL_BATTER_STATS: BatterStatsData = {
-  '1B': 65, '2B': 23, '3B': 0, hr: 56,
-  bb: 111, so: 89, go: 117, fo: 135,
-  sf: 6, sh: 0, hbp: 0, pa: 596
-};
+import { calculateBasicStats } from '../common/api/baseball';
+import { calculateBatterAbility } from '../common/api/stats';
+import { BasicStats } from '../types/BasicStats';
+import { YearlyLeague } from '../types/Database';
 
-const INITIAL_RUNNER_STATS: RunnerStats = {
-  passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03,
-  s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40,
-  '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30,
-  '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7,
-  '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85,
-  fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3
-};
+// 서브 페이지 임포트
+import LeagueBigInningVisualizer from '@apps/features/league/components/LeagueBigInningVisualizer';
+import RE24Visualizer from '@apps/features/league/components/RE24Visualizer';
+import LeagueEditPage from './league/LeagueEditPage';
+import LeagueInfoPage from './league/LeagueInfoPage';
+import LeagueSearchPage from './league/LeagueSearchPage';
+
+const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0 };
+const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
+
+const TOOL_OPTIONS = [
+	{ name: '리그 정보', Component: LeagueVisualizer },
+	{ name: 'RE24', Component: RE24Visualizer },
+	{ name: '득점 확률', Component: LeagueBigInningVisualizer },
+	{ name: '타구 가치', Component: RunValueVisualizer },
+	{ name: '개인 가치', Component: PersonalVisualizer },
+];
 
 function LeaguePage() {
-  const batterRef = useRef<BatterInputHandle>(null)
-  const runnerRef = useRef<RunnerInputHandle>(null)
-  const transitionEngine = new TransitionEngine.Standard()
+	const { id } = useParams();
+	const [searchParams] = useSearchParams();
+	const navigate = useNavigate();
+	const transitionEngine = useMemo(() => new TransitionEngine.Standard(), []);
+	const [yearlyLeagueData, setYearlyLeagueData] = useState<YearlyLeague | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [isEditMode, setIsEditMode] = useState(false), [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS), [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
+	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+	const [selectedYear, setSelectedYear] = useState<number>(2024), [leagueIdInput, setLeagueIdInput] = useState<string>('kbo');
+	const [vizData, setVizData] = useState<[RECalculationResult, Calc.WOBAWeights, number, number, number, BasicStats] | null>(null);
+	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>>([
+		{ id: '1', name: '리그 정보', Component: LeagueVisualizer },
+		{ id: '2', name: '타구 가치', Component: RunValueVisualizer }, 
+		{ id: '3', name: '개인 가치', Component: PersonalVisualizer }
+	]);
 
-  const [isBatterOpen, setIsBatterOpen] = useState(false);
-  const [isRunnerOpen, setIsRunnerOpen] = useState(false);
-  const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
+	useEffect(() => {
+		const fetchData = async () => {
+			const targetId = id === 'new' ? searchParams.get('from') : id;
+			if (!id) return;
 
-  const [leagueBatterStats, setLeagueBatterStats] = useState<BatterStatsData>(INITIAL_BATTER_STATS);
-  const [leagueRunnerStats, setLeagueRunnerStats] = useState(INITIAL_RUNNER_STATS);
+			// 1. 캐시 확인: 로딩 상태를 켜기 전에 동기적으로 확인합니다.
+			const cached = targetId ? db.getSyncCache(`yearlyLeague_${targetId}`) : null;
+			if (cached) {
+				setYearlyLeagueData(cached);
+				setLeagueBatterStats(cached.stats); 
+				setSelectedYear(cached.year); 
+				setLeagueIdInput(cached.leagueId);
+				setIsLoading(false); // 이미 데이터가 있으므로 로딩 생략
+			} else {
+				setIsLoading(true);
+			}
 
-  // 상태 관리: 시각화 도구 리스트와 계산 결과 데이터
-  const [activeTools, setActiveTools] = useState<Array<{ id: number, Component: React.ComponentType<any> }>>([
-    { id: 1, Component: Visualizer9RE },
-    { id: 2, Component: RE24Visualizer },
-    { id: 3, Component: LeagueVisualizer },
-    { id: 4, Component: RunValueVisualizer },
-    { id: 5, Component: PersonalVisualizer },
-  ])
-  const [vizData, setVizData] = useState<[RECalculationResult, Calc.WOBAWeights, number, number, number] | null>(null)
+			// 2. 실제 DB 조회 (캐시가 있더라도 최신화를 위해 수행하거나, 위에서 return 하여 생략 가능)
+			const data = targetId ? await db.getYearlyLeagueById(targetId) : null;
+			if (data) { 
+				setYearlyLeagueData(data);
+				setLeagueBatterStats(data.stats); 
+				setSelectedYear(data.year); 
+				setLeagueIdInput(data.leagueId); 
+			}
+			setIsEditMode(id === 'new');
 
-  const addTool = (Component: React.ComponentType<any>) => {
-    setActiveTools(prev => [...prev, { id: Date.now(), Component }]);
-    setIsToolMenuOpen(false);
-  }
+			// 임시 저장된 데이터 복구
+			const pending = localStorage.getItem('pending_league_edit');
+			if (pending) {
+				const pData = JSON.parse(pending);
+				setLeagueBatterStats(pData.leagueBatterStats);
+				setSelectedYear(pData.selectedYear);
+				setLeagueIdInput(pData.leagueIdInput);
+				setLeagueRunnerStats(pData.leagueRunnerStats);
+				localStorage.removeItem('pending_league_edit');
+			}
+			setIsLoading(false);
+		};
+		fetchData();
+	}, [id, searchParams]);
 
-  // Helper function to calculate batter abilities from raw stats
-  // This logic mirrors the getAbility method in BatterInput.jsx
-  const calculateBatterAbilityFromRawStats = (rawStats: BatterStatsData) => {
-    const hits = (rawStats['1B'] || 0) + (rawStats['2B'] || 0) + (rawStats['3B'] || 0) + (rawStats.hr || 0);
-    // FO에 SF가 포함된 기준의 PA 계산 로직 적용
-    const calculatedPa = hits + (rawStats.so || 0) + (rawStats.go || 0) + (rawStats.fo || 0) + 
-                         (rawStats.bb || 0) + (rawStats.hbp || 0) + (rawStats.sh || 0);
-    const pa = Math.max(1, rawStats.pa || calculatedPa);
-    return {
-      '1B': rawStats['1B'] / pa,
-      '2B': rawStats['2B'] / pa,
-      '3B': rawStats['3B'] / pa,
-      hr: rawStats.hr / pa,
-      bb: rawStats.bb / pa,
-      so: rawStats.so / pa,
-      go: rawStats.go / pa,
-      fo: rawStats.fo / pa,
-    };
-  };
+	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
+		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
+		setIsToolMenuOpen(false);
+	};
 
-  // BatterInput에서 데이터 변경 시 호출될 콜백
-  const handleLeagueBatterDataChange = (newStats: BatterStatsData) => {
-    setLeagueBatterStats(newStats);
-  };
+	const onRemoveTool = (id: string) => {
+		setActiveTools(prev => prev.filter(t => t.id !== id));
+	};
 
-  // RunnerInput에서 데이터 변경 시 호출될 콜백
-  const handleLeagueRunnerDataChange = (newStats: RunnerStats) => {
-    setLeagueRunnerStats(newStats);
-  };
+	const execute = useCallback(() => {
+		const batterStats = new BatterStats(leagueBatterStats);
+		const ability = calculateBatterAbility(batterStats);
+		const basic = calculateBasicStats(batterStats);
+		const ret = calculateRE(ability, leagueRunnerStats, transitionEngine);
+		const weights = Calc.calculateWeightedRunValue(batterStats, ret['runValue']); 
+		const lgWobaRaw = Calc.calculateCustomWOBA(weights, batterStats);
+		setVizData([ret, weights, lgWobaRaw, 0.33 / lgWobaRaw, Calc.calculateLeagueRunPerPA(ret.R[0], batterStats), basic]);
+	}, [leagueBatterStats, leagueRunnerStats, transitionEngine]);
 
-  const execute = () => {
-    // BatterInput과 RunnerInput에서 onDataChange를 통해 업데이트된 상태를 직접 사용
-    const hits = (leagueBatterStats['1B'] || 0) + (leagueBatterStats['2B'] || 0) + (leagueBatterStats['3B'] || 0) + (leagueBatterStats.hr || 0);
-    const calculatedPa = hits + (leagueBatterStats.so || 0) + (leagueBatterStats.go || 0) + (leagueBatterStats.fo || 0) + 
-                         (leagueBatterStats.bb || 0) + (leagueBatterStats.hbp || 0) + (leagueBatterStats.sh || 0);
-    const validPa = Math.max(1, leagueBatterStats.pa || calculatedPa);
+	const handleSave = useCallback(async () => {
+		const user = await db.getCurrentUser();
+		if (!user) {
+			if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+				const pendingData = { leagueIdInput, selectedYear, leagueBatterStats, leagueRunnerStats };
+				localStorage.setItem('pending_league_edit', JSON.stringify(pendingData));
+				navigate('/login');
+			}
+			return;
+		}
+		const actualId = id === 'new' ? (searchParams.get('from') || '') : id!;
+		const leagueData = { id: actualId, leagueId: leagueIdInput, year: selectedYear, stats: { ...leagueBatterStats, r: 0, rbi: 0 } };
+		try {
+			await db.saveYearlyLeague(leagueData); setIsEditMode(false);
+		} catch (e: any) { alert(e.message); }
+	}, [leagueBatterStats, selectedYear, leagueIdInput, id]);
 
-    const batterAbility = calculateBatterAbilityFromRawStats({ ...leagueBatterStats, pa: validPa }); // raw stats를 ability로 변환
-    const runnerAbility = leagueRunnerStats; // RunnerInput의 stats는 이미 ability 형태
-    const leagueBatter = { ...leagueBatterStats, pa: validPa }; // pa가 포함된 완전한 raw stats 객체 생성
+	useEffect(() => { execute(); }, [execute]);
 
-    const ret = calculateRE(batterAbility, runnerAbility, transitionEngine)
+	const isMetaValid = leagueIdInput.trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
 
-    const weights = Calc.calculateWeightedRunValue(leagueBatter, ret['runValue']);
-    const lgWobaRaw = Calc.calculateCustomWOBA(weights, leagueBatter);
-    const wOBAScale = 0.33 / lgWobaRaw;
-    const runPerPa = Calc.calculateLeagueRunPerPA(ret.R[0], leagueBatter);
+	if (!id) return <LeagueSearchPage />;
+	if (isLoading) return <Div style={{ padding: '40px' }}>데이터를 불러오는 중...</Div>;
+	if (id !== 'new' && !yearlyLeagueData) return <Div style={{ padding: '40px' }}>404 - 리그를 찾을 수 없습니다.</Div>;
 
-    setVizData([ret, weights, lgWobaRaw, wOBAScale, runPerPa]);
-  };
-
-  // 데이터가 변경될 때마다 자동으로 분석(execute) 실행
-  useEffect(() => {
-    execute();
-  }, [leagueBatterStats, leagueRunnerStats]);
-
-  return (
-    <>
-      <Div id="wrapper">
-
-        <Div style={{display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px'}}>
-          {activeTools.map(tool => (
-            <VisualizerBox key={tool.id} onRemove={() => setActiveTools(prev => prev.filter(t => t.id !== tool.id))}>
-              <tool.Component data={vizData} />
-            </VisualizerBox>
-          ))}
-        </Div>
-
-        {/* 리그 타격 기록 설정 바텀 시트 */}
-        <BottomSheet
-          isOpen={isBatterOpen}
-          onClose={() => setIsBatterOpen(false)}
-          title="리그 타격 기록 설정"
-        >
-          <BatterInput
-            ref={batterRef}
-            id="batter-league"
-            initialStats={leagueBatterStats} // LeaguePage의 상태를 초기값으로 전달
-            onDataChange={handleLeagueBatterDataChange} // 변경된 값을 LeaguePage 상태에 반영
-          />
-        </BottomSheet>
-
-        {/* 리그 주자 능력 설정 바텀 시트 */}
-        <BottomSheet
-          isOpen={isRunnerOpen}
-          onClose={() => setIsRunnerOpen(false)}
-          title="리그 주자 능력 설정"
-        >
-          <RunnerInput
-            ref={runnerRef}
-            id="runner-league"
-            initialStats={leagueRunnerStats} // LeaguePage의 상태를 초기값으로 전달
-            onDataChange={handleLeagueRunnerDataChange} // 변경된 값을 LeaguePage 상태에 반영
-          />
-        </BottomSheet>
-
-        {/* 도구 선택 팝업 (Popup 컴포넌트 사용) */}
-        <Popup
-          isOpen={isToolMenuOpen}
-          onClose={() => setIsToolMenuOpen(false)}
-          title="분석 도구 추가"
-        >
-          <Div className="tool-grid"> {/* Add tool-grid class for styling */}
-            <Button onClick={() => addTool(Visualizer9RE)}>9RE (기대 득점)</Button>
-            <Button onClick={() => addTool(RE24Visualizer)}>RE24 상황판</Button>
-            <Button onClick={() => addTool(LeagueVisualizer)}>리그 확장 지표</Button>
-            <Button onClick={() => addTool(RunValueVisualizer)}>타구 가치 분석</Button>
-            <Button onClick={() => addTool(PersonalVisualizer)}>리그 개인 가치</Button>
-            <Button onClick={() => addTool(LeagueBigInningVisualizer)}>빅이닝 확률</Button>
-          </Div>
-        </Popup>
-      </Div>
-
-      <FixedFooter>
-        <Box className="container">
-          <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'center' }}>
-            <Div style={{ display: 'flex', flexWrap: 'nowrap', justifyContent: 'left', flexGrow: 1, gap: '10px' }}>
-              <Button onClick={() => setIsBatterOpen(true)} style={{ textWrap: 'nowrap' }}>
-                리그 타격 기록 설정
-              </Button>
-              <Button onClick={() => setIsRunnerOpen(true)} style={{ textWrap: 'nowrap' }}>
-                리그 주자 능력 설정
-              </Button>
-            </Div>
-            <Div>
-              <Button onClick={() => setIsToolMenuOpen(true)} style={{ textWrap: 'nowrap' }}>
-                분석 도구
-              </Button>
-            </Div>
-          </Div>
-        </Box>
-      </FixedFooter>
-    </>
-  )
+	return isEditMode ? (
+		<LeagueEditPage
+			id={id}
+			leagueIdInput={leagueIdInput} setLeagueIdInput={setLeagueIdInput}
+			selectedYear={selectedYear} setSelectedYear={setSelectedYear}
+			leagueBatterStats={leagueBatterStats} setLeagueBatterStats={setLeagueBatterStats}
+			leagueRunnerStats={leagueRunnerStats} setLeagueRunnerStats={setLeagueRunnerStats}
+			handleSave={handleSave}
+			isMetaValid={isMetaValid}
+			activeTools={activeTools}
+			onRemoveTool={onRemoveTool}
+			vizData={vizData}
+			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
+			addTool={addTool} toolOptions={TOOL_OPTIONS}
+		/>
+	) : (
+		<LeagueInfoPage
+			id={id}
+			leagueIdInput={leagueIdInput}
+			selectedYear={selectedYear}
+			activeTools={activeTools}
+			onRemoveTool={onRemoveTool}
+			vizData={vizData}
+			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
+			addTool={addTool} toolOptions={TOOL_OPTIONS}
+		/>
+	);
 }
+
 export default LeaguePage

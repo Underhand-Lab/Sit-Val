@@ -1,10 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navigation from '@apps/common/components/Navigation';
+import PlayerPage from '@apps/pages/PlayerPage';
 import LeaguePage from '@apps/pages/LeaguePage';
 import LineupPage from '@apps/pages/LineupPage';
 import HomePage from '@apps/pages/HomePage';
 import { vars } from '@shared/bridges/UIBridge';
+import LoginPage from '@apps/pages/LoginPage';
+import AccountPage from '@apps/pages/AccountPage';
 
 function App(): React.JSX.Element {
     return (
@@ -16,8 +19,11 @@ function App(): React.JSX.Element {
                 <Routes>
                     {/* 기본 경로 접속 시 리그 분석으로 리다이렉트 */}
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/league" element={<LeaguePage />} />
-                    <Route path="/lineup" element={<LineupPage />} />
+                    <Route path="/player/:id?" element={<PlayerPage />} />
+                    <Route path="/league/:id?" element={<LeaguePage />} />
+                    <Route path="/lineup/:id?" element={<LineupPage />} />
+                    <Route path="/account" element={<AccountPage />} />
+                    <Route path="/login" element={<LoginPage />} />
                 </Routes>
             </div>
         </Router>
