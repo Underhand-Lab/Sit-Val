@@ -70,7 +70,7 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    const val = parseFloat(value) || 0;
+    const val = Math.max(0, parseFloat(value) || 0);
     
     const nextStats = { ...stats, [name]: val } as BatterStatsData;
     // pa는 입력 값이 아니므로 명시적으로 제거하여 오동작 방지
@@ -115,27 +115,27 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
         <div className="input-form">
           <div className="input-group">
             볼넷
-            <InputNumber name="bb" value={stats.bb} onChange={handleChange} />
+            <InputNumber name="bb" value={stats.bb} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             사구(HBP)
-            <InputNumber name="hbp" value={stats.hbp || 0} onChange={handleChange} />
+            <InputNumber name="hbp" value={stats.hbp || 0} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             1루타
-            <InputNumber name="1B" value={stats['1B']} onChange={handleChange} />
+            <InputNumber name="1B" value={stats['1B']} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             2루타
-            <InputNumber name="2B" value={stats['2B']} onChange={handleChange} />
+            <InputNumber name="2B" value={stats['2B']} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             3루타
-            <InputNumber name="3B" value={stats['3B']} onChange={handleChange} />
+            <InputNumber name="3B" value={stats['3B']} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             홈런
-            <InputNumber name="hr" value={stats.hr} onChange={handleChange} />
+            <InputNumber name="hr" value={stats.hr} onChange={handleChange} min="0" />
           </div>
         </div>
       </div>
@@ -146,23 +146,23 @@ const BatterInput = forwardRef<BatterInputHandle, BatterInputProps>(({ onDataCha
         <div className="input-form">
           <div className="input-group">
             삼진 아웃
-            <InputNumber name="so" value={stats.so} onChange={handleChange} />
+            <InputNumber name="so" value={stats.so} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             땅볼 아웃
-            <InputNumber name="go" value={stats.go} onChange={handleChange} />
+            <InputNumber name="go" value={stats.go} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             뜬공 아웃
-            <InputNumber name="fo" value={stats.fo} onChange={handleChange} />
+            <InputNumber name="fo" value={stats.fo} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             희생플라이
-            <InputNumber name="sf" value={stats.sf || 0} onChange={handleChange} />
+            <InputNumber name="sf" value={stats.sf || 0} onChange={handleChange} min="0" />
           </div>
           <div className="input-group">
             희생번트
-            <InputNumber name="sh" value={stats.sh || 0} onChange={handleChange} />
+            <InputNumber name="sh" value={stats.sh || 0} onChange={handleChange} min="0" />
           </div>
         </div>
       </div>
