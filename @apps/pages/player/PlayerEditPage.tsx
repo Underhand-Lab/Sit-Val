@@ -55,11 +55,12 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
       return;
     }
     const playerIdToUse = playerYearlyStats?.playerId || `player-${Date.now()}`;
+    const statsInstance = new BatterStats(currentBatterStats || INITIAL_BATTER_STATS);
     const dataToSave = { 
       id: playerYearlyStats?.id || '',
       playerId: playerIdToUse,
       year: selectedYear,
-      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), r: 0, rbi: 0 } as any,
+      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), pa: statsInstance.pa, r: 0, rbi: 0 } as any,
       name: playerName || '',
       yearlyLeagueId: yearlyLeagueId || null,
       yearlyTeamIds: playerYearlyStats?.yearlyTeamIds || ([] as string[])
@@ -71,6 +72,32 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
   }, [playerYearlyStats, currentBatterStats, selectedYear, playerName, yearlyLeagueId, id, navigate]);
 
   const isMetaValid = (playerName || '').trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
+
+  // 시각화 도구들에 전달할 데이터를 현재 편집 중인 스탯으로 보정합니다.
+  // LeagueEditPage는 부모가 vizData를 갱신해주지만, PlayerEditPage는 리그 컨텍스트가 고정되어 있으므로
+  // 개별 선수의 스탯(타석 등)이 실시간으로 도구들에 반영되려면 데이터를 여기서 병합해줘야 합니다.
+  const mergedVizData = useMemo(() => {
+    if (!vizData) return vizData;
+    const statsInstance = new BatterStats(currentBatterStats || INITIAL_BATTER_STATS);
+    const newData = [...vizData];
+    // vizData[5]가 BasicStats(기본 통계) 자리이므로 이를 현재 편집 중인 값으로 교체합니다.
+    if (newData[5]) {
+      const h = statsInstance['1B'] + statsInstance['2B'] + statsInstance['3B'] + statsInstance.hr;
+      // sf가 fo에 포함되어 있으므로, 타석(pa)에서 제외된 상태여도 타수(ab)를 구할 때는 sac_fly만큼 더 빼줘야 합니다.
+      const ab = statsInstance.pa - statsInstance.bb - statsInstance.hbp - statsInstance.sh - (currentBatterStats.sf || 0);
+      newData[5] = {
+        ...newData[5],
+        ...currentBatterStats,
+        pa: statsInstance.pa,
+        ab: ab,
+        h: h,
+        avg: h / (ab || 1),
+        obp: (h + statsInstance.bb + statsInstance.hbp) / (statsInstance.pa - statsInstance.sh || 1),
+        slg: (statsInstance['1B'] + statsInstance['2B'] * 2 + statsInstance['3B'] * 3 + statsInstance.hr * 4) / (ab || 1)
+      };
+    }
+    return newData;
+  }, [vizData, currentBatterStats]);
 
   // 분석 도구들에 현재 편집 중인 실시간 스탯을 주입합니다.
   const toolsWithStats = useMemo(() => {
@@ -85,7 +112,7 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
       <PageHeader title={`${playerName} (${selectedYear})`} subTitle={id} isEditMode={true} onEditToggle={() => navigate(-1)} onSave={handleSave} showSave={true} isSaveDisabled={!isMetaValid} />
       <VisualizerList 
         tools={toolsWithStats} 
-        data={vizData} 
+        data={mergedVizData} 
         onRemove={onRemoveTool || (() => {})} 
         toolOptions={toolOptions || []}
         onAddTool={addTool}
@@ -131,7 +158,7 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
       </BottomSheet>
       <BottomSheet isOpen={isBatterInputOpen} onClose={() => setIsBatterInputOpen(false)} title="선수 스탯">
         <BatterInput initialStats={currentBatterStats} onDataChange={setCurrentBatterStats} />
-        <Button onClick={() => { handleSave(); setIsBatterInputOpen(false); }} style={{ width: '100%', marginTop: '10px', backgroundColor: '#4CAF50', color: 'white' }}>저장</Button>
+        <Button onClick={() => setIsBatterInputOpen(false)} style={{ width: '100%', marginTop: '10px' }}>확인</Button>
       </BottomSheet>
 
       <FixedFooter style={{ backgroundColor: vars.box, borderTop: `1px solid ${vars.surface}` }}>

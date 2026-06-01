@@ -7,10 +7,11 @@ import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
 
 interface PersonalVisualizerProps {
   data: [RECalculationResult, WOBAWeights, number, number, number] | null;
+  batterStats?: BatterStatsData;
 }
 
-const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
-  const [batterStats, setBatterStats] = useState<BatterStatsData>({
+const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data, batterStats: propsBatterStats }) => {
+  const [internalBatterStats, setInternalBatterStats] = useState<BatterStatsData>({
     '1B': 65, '2B': 23, '3B': 0, hr: 56,
     bb: 111, so: 89, go: 117, fo: 135,
     sf: 6, sh: 0, hbp: 0, pa: 596
@@ -22,11 +23,11 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
   if (!data || !data[0] || !data[1]) return null;
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
-  // 입력된 성적을 바탕으로 타석(PA) 등이 자동 계산되는 인스턴스 생성
-  const stats = useMemo(() => new BatterStats(batterStats), [batterStats]);
+  // 주입받은 props가 있으면 그것을, 없으면 내부 상태를 사용
+  const stats = useMemo(() => new BatterStats(propsBatterStats || internalBatterStats), [propsBatterStats, internalBatterStats]);
 
   const handleBatterChange = (newStats: BatterStatsData) => {
-    setBatterStats(newStats);
+    setInternalBatterStats(newStats);
   };
 
   const calculateWoba = () => {
@@ -90,8 +91,14 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
         </Div>
 
         <Div>
-          <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', }}>
-            <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee' }}>
+          <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
+            <Div style={{ textAlign: 'center', padding: '10px', borderRight: `1px solid ${vars.surface}` }}>
+              <span style={{ fontSize: '0.8em' }}>타석 (PA)</span>
+              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.text }}>
+                {stats.pa}
+              </Div>
+            </Div>
+            <Div style={{ textAlign: 'center', padding: '10px', borderRight: `1px solid ${vars.surface}` }}>
               <span style={{ fontSize: '0.8em' }}>wRAA (표준)</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraa >= 0 ? '#e74c3c' : '#3498db' }}>
                 {wraa > 0 ? '+' : ''}{wraa.toFixed(2)}
@@ -103,13 +110,13 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
                 {wraaCustom > 0 ? '+' : ''}{wraaCustom.toFixed(2)}
               </Div>
             </Div>
-            <Div style={{ textAlign: 'center', padding: '10px', borderRight: '1px solid #eee', borderTop: '1px solid #eee' }}>
+            <Div style={{ textAlign: 'center', padding: '10px', borderRight: `1px solid ${vars.surface}`, borderTop: `1px solid ${vars.surface}` }}>
               <span style={{ fontSize: '0.8em', }}>wRC+ (커스텀)</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.primary }}>
                 {Math.round(wrcPlusCustom)}
               </Div>
             </Div>
-            <Div style={{ textAlign: 'center', padding: '10px', borderTop: '1px solid #eee' }}>
+            <Div style={{ textAlign: 'center', padding: '10px', borderTop: `1px solid ${vars.surface}` }}>
               <span style={{ fontSize: '0.8em', }}>타석당 득점 가치</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.primary }}>
                 {(wraaCustom / (stats.pa || 1)).toFixed(3)}
@@ -119,12 +126,14 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data }) => {
         </Div>
       </Div>
 
-      <Button className="neumorphism-Button" onClick={() => setIsBatterOpen(true)}>
-        대상 선수 성적 수정
-      </Button>
+      {!propsBatterStats && (
+        <Button className="neumorphism-Button" onClick={() => setIsBatterOpen(true)}>
+          대상 선수 성적 수정
+        </Button>
+      )}
 
       <BottomSheet isOpen={isBatterOpen} onClose={() => setIsBatterOpen(false)} title="대상 타자 성적 설정">
-        <BatterInput ref={batterRef} initialStats={batterStats} onDataChange={handleBatterChange} id="personal-batter-analysis-input" />
+        <BatterInput ref={batterRef} initialStats={internalBatterStats} onDataChange={handleBatterChange} id="personal-batter-analysis-input" />
       </BottomSheet>
     </Div>
   );

@@ -33,6 +33,7 @@ export class BatterStats implements Omit<BatterStatsData, 'pa'> {
     if (init) {
       const { pa, ...data } = init as any; // 데이터에 포함된 pa 필드는 무시
       Object.assign(this, data);
+      this._pa = null; // 인스턴 복사 시 캐시가 같이 복사되는 것을 방지하기 위해 초기화
     }
   }
 
