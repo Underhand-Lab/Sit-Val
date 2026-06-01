@@ -91,13 +91,7 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data, batterSta
         </Div>
 
         <Div>
-          <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '5px' }}>
-            <Div style={{ textAlign: 'center', padding: '10px', borderRight: `1px solid ${vars.surface}` }}>
-              <span style={{ fontSize: '0.8em' }}>타석 (PA)</span>
-              <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: vars.text }}>
-                {stats.pa}
-              </Div>
-            </Div>
+          <Div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '5px' }}>
             <Div style={{ textAlign: 'center', padding: '10px', borderRight: `1px solid ${vars.surface}` }}>
               <span style={{ fontSize: '0.8em' }}>wRAA (표준)</span>
               <Div style={{ fontSize: '1.2em', fontWeight: 'bold', color: wraa >= 0 ? '#e74c3c' : '#3498db' }}>

@@ -3,6 +3,7 @@ import { Div, Box, Wrapper, H3, vars, Button } from '@shared/bridges/UIBridge';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../services/db';
 import * as Hangul from 'hangul-js';
+import { ListItemCard } from '../common/components/ListItemCard';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -53,22 +54,20 @@ const HomePage: React.FC = () => {
       </Div>
       <Div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
         {items.length > 0 ? items.map(item => (
-          <Div
-            key={item.id}
-            onClick={() => navigate(`/${type}/${item.id}`)}
-            style={{
-              padding: '12px',
-              backgroundColor: vars.surface,
-              borderRadius: '8px',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>{item.year} {item.name || item.leagueId}</span>
-            <span style={{ fontSize: '12px', opacity: 0.5 }}>{item.id.split('-')[0]}...</span>
-          </Div>
+          <ListItemCard key={item.id} onClick={() => navigate(`/${type}/${item.id}`)}>
+            <Div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <Div style={{ 
+                backgroundColor: vars.surface, 
+                padding: '4px 8px', 
+                borderRadius: '6px', 
+                fontSize: '12px', 
+                fontWeight: 'bold', 
+                color: vars.primary 
+              }}>{item.year}</Div>
+              <span style={{ fontSize: '16px', fontWeight: 600, color: vars.text }}>{item.name || item.leagueId}</span>
+            </Div>
+            <span style={{ fontSize: '12px', color: vars.text, opacity: 0.4 }}>{item.id.split('-')[0]}...</span>
+          </ListItemCard>
         )) : (
           <p style={{ opacity: 0.5, fontSize: '12px', textAlign: 'center' }}>데이터가 없습니다.</p>
         )}

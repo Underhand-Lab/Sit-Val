@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import Navigation from '@apps/common/components/Navigation';
 import PlayerPage from '@apps/pages/PlayerPage';
 import LeaguePage from '@apps/pages/LeaguePage';
@@ -11,7 +11,7 @@ import AccountPage from '@apps/pages/AccountPage';
 
 function App(): React.JSX.Element {
     return (
-        <Router basename="/sit-val">
+        <Router>
             <div className="app-shell" style={{ minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', background: vars.background }}>
                 {/* 공통 네비게이션: App.jsx에서 일괄 관리 */}
                 <Navigation />

@@ -13,9 +13,9 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, subTitle, isEditMode, onEditToggle, onSave, showSave, isSaveDisabled }) => (
   <Div style={{ padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <Div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px' }}> {/* 텍스트 컨테이너가 줄어들 수 있도록 설정 */}
+    <Div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '10px', flex: 1 }}> {/* 텍스트 컨테이너가 줄어들 수 있도록 설정 */}
       <H3 style={{ margin: 0, whiteSpace: 'normal', overflowWrap: 'break-word' }}>{title}</H3> {/* 제목 텍스트 줄 바꿈 허용 */}
-      <p style={{ color: '#666', fontSize: '12px', whiteSpace: 'normal', overflowWrap: 'break-word' }}>{subTitle}</p> {/* 부제목 텍스트 줄 바꿈 허용 */}
+      <p style={{ color: '#666', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{subTitle}</p> {/* 부제목 텍스트 줄 바꿈 허용 */}
     </Div>
     <Div style={{ display: 'flex', gap: '8px' }}>
       {showSave && isEditMode && (

@@ -4,6 +4,7 @@ import { Div, vars } from '@shared/bridges/UIBridge';
 import { db } from '../../services/db';
 import { YearlyPlayer } from '@packages/sit-val/types/Database';
 import { DataManagementView } from '../../common/components/DataManagementView';
+import { ListItemCard } from '../../common/components/ListItemCard';
 
 const PlayerSearchPage: React.FC = () => {
 	const navigate = useNavigate();
@@ -25,37 +26,6 @@ const PlayerSearchPage: React.FC = () => {
 	useEffect(() => {
 		loadPlayers();
 	}, [loadPlayers]);
-
-	// ListItemCard 컴포넌트를 PlayerSearchPage 내부에 정의하여 hover 및 삭제 기능을 적용합니다.
-	const ListItemCard: React.FC<{
-		children: React.ReactNode;
-		onClick: () => void;
-	}> = ({ children, onClick }) => {
-		const [isHovered, setIsHovered] = useState(false);
-
-		return (
-			<Div
-				onClick={onClick}
-				onMouseEnter={() => setIsHovered(true)}
-				onMouseLeave={() => setIsHovered(false)}
-				style={{
-					padding: '16px',
-					backgroundColor: vars.box,
-					borderRadius: '12px',
-					cursor: 'pointer',
-					border: `1px solid ${vars.surface}`,
-					display: 'flex',
-					alignItems: 'center',
-					transition: 'all 0.2s ease-in-out', // 부드러운 전환 효과
-					transform: isHovered ? 'translateY(-3px)' : 'translateY(0)', // 마우스 오버 시 살짝 위로 이동
-					boxShadow: isHovered ? '0 4px 8px rgba(0, 0, 0, 0.1)' : 'none', // 마우스 오버 시 그림자 효과
-				}}
-			>
-				{children}
-				{/* 삭제 버튼은 children 내부에 포함될 수 있도록 ListItemCard의 children으로 전달 */}
-			</Div>
-		);
-	};
 
 	const handleDeletePlayer = async (id: string) => {
 		if (window.confirm('정말로 이 선수를 삭제하시겠습니까?')) {

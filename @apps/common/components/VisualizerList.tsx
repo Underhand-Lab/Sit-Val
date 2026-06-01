@@ -11,7 +11,7 @@ interface VisualizerListProps {
 
 export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data, onRemove, toolOptions, onAddTool }) => {
   // 초기 탭 ID를 첫 번째 도구의 ID로 즉시 설정하여 불필요한 재렌더링 방지
-  const [activeTabId, setActiveTabId] = useState<string | null>(() => 
+  const [activeTabId, setActiveTabId] = useState<string | null>(() =>
     (Array.isArray(tools) && tools.length > 0) ? tools[0].id : null
   );
   const [isAddMenuOpen, setIsAddMenuOpen] = useState(false);
@@ -123,19 +123,19 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-              backgroundColor: activeTabId === tool.id ? vars.box : 'transparent',
-              borderRight: `1px solid ${vars.surface}`,
-              borderTop: activeTabId === tool.id ? `3px solid ${vars.primary}` : '3px solid transparent',
+                backgroundColor: activeTabId === tool.id ? vars.box : 'transparent',
+                borderRight: `1px solid ${vars.surface}`,
+                borderTop: activeTabId === tool.id ? `3px solid ${vars.primary}` : '3px solid transparent',
                 minWidth: 'fit-content',
                 transition: 'background-color 0.1s',
                 userSelect: 'none'
               }}
             >
-            <span style={{ fontSize: '14px', color: vars.text, fontWeight: activeTabId === tool.id ? 'bold' : 'normal' }}>
+              <span style={{ fontSize: '14px', color: vars.text, fontWeight: activeTabId === tool.id ? 'bold' : 'normal' }}>
                 {tool.name}
               </span>
-            <button
-              onClick={(e: React.MouseEvent) => {
+              <button
+                onClick={(e: React.MouseEvent) => {
                   e.stopPropagation();
                   onRemove(tool.id);
                 }}
@@ -158,7 +158,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
         {/* 도구 추가 버튼 (+) */}
         {toolOptions && onAddTool && (
           <Div style={{ position: 'relative', borderLeft: `1px solid ${vars.surface}` }} ref={addMenuRef}>
-            <Button 
+            <Button
               onClick={() => setIsAddMenuOpen(!isAddMenuOpen)}
               noHover
               style={{
@@ -193,7 +193,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
                 padding: '5px 0'
               }}>
                 {toolOptions.map(option => (
-                  <Div 
+                  <Div
                     key={option.name}
                     onClick={() => {
                       onAddTool(option);
@@ -219,45 +219,47 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({ tools = [], data
       </Div>
 
       {/* 컨텐츠 표시 영역 */}
-      <Div style={{ flex: 1, padding: '24px', backgroundColor: vars.box, overflowY: 'auto' }}>
-        {(() => {
-          if (!activeTool || !ActiveComponent) {
+      <Div style={{ flex: 1, overflowY: 'auto', backgroundColor: vars.box, padding: '24px' }}>
+        <Div style={{ }}>
+          {(() => {
+            if (!activeTool || !ActiveComponent) {
+              return (
+                <Div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: vars.text, flexDirection: 'column', gap: '10px' }}>
+                  <p>표시할 분석 도구가 없습니다.</p>
+                  <p style={{ fontSize: '12px' }}>상단에서 도구를 추가하여 분석을 시작하세요.</p>
+                </Div>
+              );
+            }
+
+            // 1. 컴포넌트 형식 확인
+            const type = typeof ActiveComponent;
+
+            // 2. 이미 생성된 React 엘리먼트인 경우 그대로 렌더링 (또는 multi-react 대응)
+            const isReactElement = React.isValidElement(ActiveComponent) ||
+              (type === 'object' && ActiveComponent !== null && ActiveComponent.$$typeof?.toString().includes('react.element'));
+
+            if (isReactElement) {
+              return ActiveComponent;
+            }
+
+            // 3. 컴포넌트 타입(함수, 클래스, 또는 memo/forwardRef 객체)인 경우 태그로 렌더링, props 전달
+            const isComponentType =
+              type === 'function' ||
+              type === 'string' ||
+              (type === 'object' && ActiveComponent !== null && ActiveComponent.$$typeof);
+
+            if (isComponentType) {
+              return <ActiveComponent data={data} {...(activeTool.props || {})} />;
+            }
+
+            // 4. 예외 상황 처리
             return (
-              <Div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: vars.text, flexDirection: 'column', gap: '10px' }}>
-                <p>표시할 분석 도구가 없습니다.</p>
-                <p style={{ fontSize: '12px' }}>상단에서 도구를 추가하여 분석을 시작하세요.</p>
+              <Div style={{ color: vars.text, textAlign: 'center' }}>
+                오류: 유효하지 않은 분석 도구 컴포넌트 형식입니다.
               </Div>
             );
-          }
-
-          // 1. 컴포넌트 형식 확인
-          const type = typeof ActiveComponent;
-
-          // 2. 이미 생성된 React 엘리먼트인 경우 그대로 렌더링 (또는 multi-react 대응)
-          const isReactElement = React.isValidElement(ActiveComponent) || 
-            (type === 'object' && ActiveComponent !== null && ActiveComponent.$$typeof?.toString().includes('react.element'));
-
-          if (isReactElement) {
-            return ActiveComponent;
-          }
-
-          // 3. 컴포넌트 타입(함수, 클래스, 또는 memo/forwardRef 객체)인 경우 태그로 렌더링, props 전달
-          const isComponentType = 
-            type === 'function' || 
-            type === 'string' || 
-            (type === 'object' && ActiveComponent !== null && ActiveComponent.$$typeof);
-
-          if (isComponentType) {
-            return <ActiveComponent data={data} {...(activeTool.props || {})} />;
-          }
-
-          // 4. 예외 상황 처리
-          return (
-            <Div style={{ color: vars.text, textAlign: 'center' }}>
-              오류: 유효하지 않은 분석 도구 컴포넌트 형식입니다.
-            </Div>
-          );
-        })()}
+          })()}
+        </Div>
       </Div>
     </Div>
   );

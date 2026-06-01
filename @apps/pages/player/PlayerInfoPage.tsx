@@ -1,10 +1,10 @@
+import { YearlyLeague, YearlyPlayer } from '@packages/sit-val/types/Database';
+import { Button, Div, FixedFooter, vars } from '@shared/bridges/UIBridge';
+import { BatterStats } from '@sit-val/types/BatterStats';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Div, Box, FixedFooter, Button, vars } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../common/components/VisualizerList';
-import { YearlyPlayer, YearlyLeague, ExtendedBatterStats } from '@packages/sit-val/types/Database';
-import { BatterStats } from '@sit-val/types/BatterStats';
 
 interface PlayerInfoPageProps {
   id: string;
