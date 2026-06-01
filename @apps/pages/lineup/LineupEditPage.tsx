@@ -1,15 +1,17 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Div, Button, FixedFooter, BottomSheet, InputNumber } from '@shared/bridges/UIBridge';
+import { Box, Div, Button, FixedFooter, BottomSheet, InputNumber, vars } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../common/components/VisualizerList';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
 import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput';
 import { db } from '../../services/db';
-import { BatterStatsData } from '@sit-val/types/BatterStats';
+import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
 import { ExtendedBatterStats, YearlyPlayer, Player } from '@packages/sit-val/types/Database';
 import { LineupPlayerDisplay } from '../LineupPage';
+import { ListItemCard } from '../../common/components/ListItemCard';
+import * as Hangul from 'hangul-js';
 
 interface LineupEditPageProps {
 	id: string; 
@@ -44,13 +46,27 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 	const batterRef = useRef<BatterInputHandle>(null);
 	const runnerRef = useRef<RunnerInputHandle>(null);
 
-	const [isPlayerListOpen, setPlayerListOpen] = useState(false);
 	const [isLineupEditOpen, setLineupEditOpen] = useState(false);
 	const [isRunnerOpen, setRunnerOpen] = useState(false);
 	const [isBatterEditOpen, setBatterEditOpen] = useState(false);
 	const [isMetaOpen, setIsMetaOpen] = useState(false);
 	const [editingYearlyPlayerId, setEditingYearlyPlayerId] = useState<string | null>(null);
 	const [editingPlayerStats, setEditingPlayerStats] = useState<BatterStatsData | null>(null);
+	
+	const [isPlayerSelectOpen, setPlayerSelectOpen] = useState(false);
+	const [playerSearchTerm, setPlayerSearchTerm] = useState('');
+	const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
+	const [newPlayerName, setNewPlayerName] = useState('');
+	const [allSearchablePlayers, setAllSearchablePlayers] = useState<LineupPlayerDisplay[]>([]);
+
+	useEffect(() => {
+		const loadAll = async () => {
+			const data = await db.getAllYearlyPlayersWithNames();
+			// 최신 연도 순으로 정렬하여 검색 편의성 제공
+			setAllSearchablePlayers(data.sort((a, b) => b.year - a.year));
+		};
+		loadAll();
+	}, []);
 
 	const startEditPlayer = (yearlyPlayerId: string, stats: BatterStatsData) => {
 		setEditingYearlyPlayerId(yearlyPlayerId);
@@ -111,6 +127,50 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 		navigate(`/lineup/${res.id}`);
 	}, [lineupRunnerStats, lineupOrder, selectedYear, lineupName, id, navigate]);
 
+	const filteredSearchPlayers = useMemo(() => {
+		const term = playerSearchTerm.trim();
+		if (!term) return allSearchablePlayers.slice(0, 50); // 초기 상태는 상위 50명만 표시
+		const lowerTerm = term.toLowerCase();
+		return allSearchablePlayers.filter(p => 
+			(p.name && Hangul.search(p.name, term) >= 0) || 
+			(p.year && p.year.toString().includes(lowerTerm)) ||
+			(p.id && p.id.toLowerCase().includes(lowerTerm))
+		).slice(0, 100); // 검색 결과 성능 최적화
+	}, [allSearchablePlayers, playerSearchTerm]);
+
+	const handleSelectPlayer = (selectedPlayer: LineupPlayerDisplay) => {
+		if (activeSlotIndex === null) return;
+
+		// 선택된 선수가 현재 가용 선수 목록에 없으면 추가 (편집 기능 및 데이터 정합성 유지)
+		setAvailablePlayers(prev => {
+			if (prev.find(p => p.id === selectedPlayer.id)) return prev;
+			return [...prev, selectedPlayer];
+		});
+
+		const newOrder = [...lineupOrder];
+		newOrder[activeSlotIndex] = selectedPlayer.id;
+		setLineupOrder(newOrder);
+		setCurrentLineupPlayers((prev: LineupPlayerDisplay[]) => prev.map((p, i) => i === activeSlotIndex ? selectedPlayer : p));
+		setPlayerSelectOpen(false);
+	};
+
+	const handleCreateAndSelectNewPlayer = async () => {
+		if (activeSlotIndex === null) return;
+		const nameToUse = newPlayerName || playerSearchTerm || `새 선수 ${Date.now()}`;
+		const newPlayerId = `new-player-${Date.now()}`;
+		await db.addPlayer({ id: newPlayerId, name: nameToUse });
+		const user = await db.getCurrentUser();
+		const defaultStats: BatterStatsData = { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0 };
+		const newYearlyPlayer: YearlyPlayer & { name: string } = {
+			id: `${newPlayerId}-${selectedYear}-${Date.now()}`, playerId: newPlayerId, name: nameToUse, year: selectedYear, yearlyTeamIds: [],
+			stats: { ...defaultStats, pa: 0, r: 0, rbi: 0 } as ExtendedBatterStats,
+			creatorId: user?.id || 'unknown',
+		};
+		await db.saveYearlyPlayer(newYearlyPlayer);
+		setAvailablePlayers(prev => [...prev, newYearlyPlayer as LineupPlayerDisplay]);
+		handleSelectPlayer(newYearlyPlayer as LineupPlayerDisplay);
+	};
+
 	const isMetaValid = lineupName.trim() !== '' && !isNaN(selectedYear) && selectedYear > 0;
 
 	return (
@@ -133,46 +193,108 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 				onAddTool={addTool}
 			/>
 
-			<BottomSheet isOpen={isPlayerListOpen} onClose={() => setPlayerListOpen(false)} title="선수 명단">
-				<Div style={{ flex: 1, overflowY: 'auto' }}>
-					{availablePlayers.length === 0 && <p>등록된 선수가 없습니다. 새 선수를 추가해주세요.</p>}
-					{availablePlayers.map(p => (
-						<Div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', borderBottom: '1px solid #eee', gap: '10px' }}>
-							<span>{p.name}</span>
-							<Div style={{ display: 'flex', gap: '5px' }}>
-								<Button style={{ padding: '5px 10px' }} onClick={() => startEditPlayer(p.id, p.stats)}>편집</Button>
-								<Button style={{ padding: '5px 10px', backgroundColor: '#007bff', color: 'white' }} onClick={() => {
-									if (currentLineupPlayers.length < 9) {
-										setCurrentLineupPlayers((prev: LineupPlayerDisplay[]) => [...prev, p]);
-										setLineupOrder((prev: string[]) => [...prev, p.id]);
-									}
-								}}>라인업 추가</Button>
+			<BottomSheet isOpen={isLineupEditOpen} onClose={() => setLineupEditOpen(false)} title="타순 설정">
+				<Div style={{ flex: 1, overflowY: 'auto', padding: '10px 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '8px', minHeight: '400px' }}>
+					{lineupOrder.map((yearlyPlayerId, idx) => (
+						<ListItemCard 
+							key={idx} 
+							onClick={() => {
+								setActiveSlotIndex(idx);
+								setPlayerSearchTerm('');
+								setNewPlayerName('');
+								setPlayerSelectOpen(true);
+							}}
+							style={{ padding: '12px', borderRadius: '10px' }}
+						>
+							<Div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+								<Div style={{ 
+									backgroundColor: vars.secondary, 
+									color: 'white', 
+									width: '28px', 
+									height: '28px', 
+									borderRadius: '50%', 
+									display: 'flex', 
+									alignItems: 'center', 
+									justifyContent: 'center',
+									fontSize: '13px',
+									fontWeight: 'bold',
+									flexShrink: 0
+								}}>{idx + 1}</Div>
+								<Div style={{ flex: 1, display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+									<span style={{ fontSize: '16px', fontWeight: 600, color: vars.text }}>{currentLineupPlayers[idx]?.name || '선수 선택'}</span>
+									<span style={{ fontSize: '12px', opacity: 0.5 }}>({currentLineupPlayers[idx]?.year || selectedYear})</span>
+								</Div>
 							</Div>
-						</Div>
+							<Button 
+								style={{ padding: '6px 12px', fontSize: '12px', marginLeft: '10px' }} 
+								onClick={(e) => {
+									e.stopPropagation(); // 카드 클릭(선수 선택) 이벤트가 발생하지 않도록 차단
+									const p = currentLineupPlayers[idx];
+									if (p && !p.id.startsWith('placeholder')) {
+										startEditPlayer(p.id, p.stats);
+									} else {
+										alert('선수를 먼저 선택하거나 생성해주세요.');
+									}
+								}}
+							>편집</Button>
+						</ListItemCard>
 					))}
+					<Button style={{ width: '100%', }} onClick={() => setLineupEditOpen(false)}>확인</Button>
 				</Div>
-				<Button style={{ width: '100%', marginTop: '15px' }} onClick={handleAddNewPlayerToDB}>새 선수 추가</Button>
 			</BottomSheet>
 
-			<BottomSheet isOpen={isLineupEditOpen} onClose={() => setLineupEditOpen(false)} title="타순 설정">
-				<Div style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-					{lineupOrder.map((yearlyPlayerId, idx) => (
-						<Div key={idx} style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-							<span style={{ minWidth: '60px' }}>{idx + 1}번 타자</span>
-							<select value={yearlyPlayerId} onChange={(e) => {
-								const selectedYearlyPlayerId = e.target.value;
-								const selectedPlayer = availablePlayers.find(p => p.id === selectedYearlyPlayerId);
-								if (selectedPlayer) {
-									const newOrder = [...lineupOrder]; newOrder[idx] = selectedYearlyPlayerId; setLineupOrder(newOrder);
-									setCurrentLineupPlayers((prev: LineupPlayerDisplay[]) => prev.map((p, i) => i === idx ? selectedPlayer : p));
-								}
-							}} style={{ flex: 1, padding: '8px' }}>
-								{availablePlayers.map(p => <option key={p.id} value={p.id}>{p.name} ({p.year})</option>)}
-							</select>
-						</Div>
-					))}
+			<BottomSheet isOpen={isPlayerSelectOpen} onClose={() => setPlayerSelectOpen(false)} title={`${activeSlotIndex !== null ? activeSlotIndex + 1 : ''}번 타자 선택`}>
+				<Div style={{ padding: '0 20px 20px 20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+					<input 
+						placeholder="선수 이름 검색..." 
+						value={playerSearchTerm} 
+						onChange={(e) => setPlayerSearchTerm(e.target.value)}
+						style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', boxSizing: 'border-box' }}
+					/>
+					
+					<Div style={{ maxHeight: '400px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+						{filteredSearchPlayers.map(p => (
+							<ListItemCard 
+								key={p.id} 
+								onClick={() => handleSelectPlayer(p)}
+								style={{ marginBottom: '4px' }}
+							>
+								<Div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+									<Div style={{ 
+										backgroundColor: vars.surface, 
+										padding: '4px 8px', 
+										borderRadius: '6px', 
+										fontSize: '12px', 
+										fontWeight: 'bold', 
+										color: vars.primary 
+									}}>{p.year}</Div>
+									<span style={{ fontSize: '16px', fontWeight: 600, color: vars.text }}>{p.name}</span>
+								</Div>
+								<span style={{ fontSize: '11px', color: vars.text, opacity: 0.4 }}>{p.id.split('-')[0]}...</span>
+							</ListItemCard>
+						))}
+						
+						{playerSearchTerm.trim() !== '' && filteredSearchPlayers.length === 0 && (
+							<Div style={{ padding: '30px 20px', textAlign: 'center', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '12px' }}>
+								<p style={{ margin: '0 0 10px 0', fontSize: '14px', color: '#856404' }}>'{playerSearchTerm}' 선수를 찾을 수 없습니다. 직접 입력하여 추가하시겠습니까?</p>
+								<Div style={{ display: 'flex', flexDirection: 'column', gap: '10px', textAlign: 'left' }}>
+									<Div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+										<label style={{ fontSize: '12px', minWidth: '60px' }}>선수 이름</label>
+										<input 
+											value={newPlayerName || playerSearchTerm} 
+											onChange={(e) => setNewPlayerName(e.target.value)}
+											style={{ flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+										/>
+									</Div>
+									<Button 
+										onClick={handleCreateAndSelectNewPlayer}
+										style={{ backgroundColor: '#4CAF50', color: 'white' }}
+									>이 이름으로 새 선수 생성 및 선택</Button>
+								</Div>
+							</Div>
+						)}
+					</Div>
 				</Div>
-				<Button style={{ width: '100%', marginTop: '10px' }} onClick={() => setLineupEditOpen(false)}>확인</Button>
 			</BottomSheet>
 
 			<BottomSheet isOpen={isRunnerOpen} onClose={() => setRunnerOpen(false)} title="주자 설정">
@@ -202,7 +324,6 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 				<Box className="container">
 					<Div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
 						<Button onClick={() => setIsMetaOpen(true)}>기본 정보</Button>
-						<Button onClick={() => setPlayerListOpen(true)}>선수 명단</Button>
 						<Button onClick={() => setLineupEditOpen(true)}>타순 설정</Button>
 						<Button onClick={() => setRunnerOpen(true)}>주자 설정</Button>
 					</Div>

@@ -169,7 +169,7 @@ const NewLineupPage: React.FC = () => {
 				player = {
 					id: placeholderId,
 					playerId: `temp-player-${i + 1}`,
-					name: `선수 ${i + 1}`,
+					name: `선수 미지정`,
 					year: selectedYear,
 					yearlyTeamIds: [],
 					stats: { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0, r: 0, rbi: 0 },
