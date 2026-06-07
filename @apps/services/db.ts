@@ -29,6 +29,45 @@ const _clearCache = (key: string) => {
   localStorage.removeItem(CACHE_PREFIX + key);
 };
 
+const BATTER_STATS_KEYS = ['1B', '2B', '3B', 'hr', 'bb', 'hbp', 'so', 'go', 'fo', 'sf', 'sh', 'r', 'rbi'];
+const RUNNER_STATS_KEYS = [
+  'passedball', 's_r1_r2_safe', 's_r1_r2_out', 's_r2_r3_safe', 's_r2_r3_out',
+  '1B_r2_home_safe', '1B_r2_home_out', '1B_r2_r3_safe', '1B_r1_r3_safe', '1B_r1_r3_out', '1B_r1_r2_safe',
+  '2B_r1_home_safe', '2B_r1_home_out', '2B_r1_r3_safe',
+  'fo_r3_home_safe', 'fo_r3_home_out', 'fo_r3_r3_safe',
+  'go_r1_r2_out', 'go_b_r1_out'
+];
+
+const _transformBatterStats = (row: any) => {
+  if (!row) return row;
+  const stats: any = {};
+  BATTER_STATS_KEYS.forEach(k => {
+    if (k in row) { stats[k] = row[k]; delete row[k]; }
+  });
+  return { ...row, stats };
+};
+
+const _flattenBatterStats = (data: any) => {
+  const { stats, ...rest } = data;
+  if (!stats) return rest;
+  const { pa, ...statsWithoutPa } = stats; // pa 제외
+  return { ...rest, ...statsWithoutPa };
+};
+
+const _transformRunnerStats = (row: any) => {
+  if (!row) return row;
+  const runnerStats: any = {};
+  RUNNER_STATS_KEYS.forEach(k => {
+    if (k in row) { runnerStats[k] = row[k]; delete row[k]; }
+  });
+  return { ...row, runnerStats };
+};
+
+const _flattenRunnerStats = (data: any) => {
+  const { runnerStats, ...rest } = data;
+  return { ...rest, ...(runnerStats || {}) };
+};
+
 /**
  * Supabase 기반 DB 서비스
  * 모든 읽기 작업은 공개되어 있으며, 쓰기/편집은 RLS(Row Level Security)를 통해 
@@ -66,26 +105,23 @@ export const db = {
 
   getYearlyLeagues: async (leagueId: string) => {
     const cacheKey = `yearlyLeagues_${leagueId}`;
-    const cached = _getCache(cacheKey);
-    if (cached) return cached as YearlyLeague[];
 
     const { data, error } = await supabase
       .from('yearly_leagues')
       .select('*')
       .eq('leagueId', leagueId);
     if (error) throw error;
-    _setCache(cacheKey, data);
-    return data as YearlyLeague[];
+    const result = data.map(_transformBatterStats);
+    _setCache(cacheKey, result);
+    return result as YearlyLeague[];
   },
   
   getAllYearlyLeagues: async () => {
-    const cached = _getCache('allYearlyLeagues');
-    if (cached) return cached as YearlyLeague[];
-
     const { data, error } = await supabase.from('yearly_leagues').select('*');
     if (error) throw error;
-    _setCache('allYearlyLeagues', data);
-    return data as YearlyLeague[];
+    const result = data.map(_transformBatterStats);
+    _setCache('allYearlyLeagues', result);
+    return result as YearlyLeague[];
   },
 
   saveYearlyLeague: async (data: Omit<YearlyLeague, 'creatorId'>) => {
@@ -93,11 +129,12 @@ export const db = {
     if (!user) throw new Error('로그인이 필요합니다.');
 
     const existing = await db.getYearlyLeagueById(data.id);
+    const flattenedData = _flattenBatterStats(data);
 
     if (existing && existing.creatorId === user.id) {
       const { error } = await supabase
         .from('yearly_leagues')
-        .update({ ...data, creatorId: user.id })
+        .update({ ...flattenedData, creatorId: user.id })
         .eq('id', data.id);
       if (error) throw error;
       _clearCache(`yearlyLeague_${data.id}`);
@@ -108,7 +145,7 @@ export const db = {
       const newId = `${data.leagueId}-${data.year}-${Date.now()}`;
       const { error } = await supabase
         .from('yearly_leagues')
-        .insert([{ ...data, id: newId, creatorId: user.id }]);
+        .insert([{ ...flattenedData, id: newId, creatorId: user.id }]);
       if (error) throw error;
       _clearCache(`yearlyLeagues_${data.leagueId}`);
       _clearCache('allYearlyLeagues');
@@ -135,20 +172,15 @@ export const db = {
 
   getYearlyLeagueById: async (id: string) => {
     const cacheKey = `yearlyLeague_${id}`;
-    const cached = _getCache(cacheKey);
-    if (cached) return cached as YearlyLeague;
 
     const { data } = await supabase.from('yearly_leagues').select('*').eq('id', id).maybeSingle();
-    if (data) _setCache(cacheKey, data);
-    return data as YearlyLeague | null;
+    const transformed = _transformBatterStats(data);
+    if (transformed) _setCache(cacheKey, transformed);
+    return transformed as YearlyLeague | null;
   },
 
   getYearlyPlayerById: async (id: string) => {
     const cacheKey = `yearlyPlayer_${id}`;
-    const cached = _getCache(cacheKey);
-    // 이름 정보가 유효한 최신 형식의 캐시인 경우에만 반환합니다.
-    if (cached && (cached as any).name && (cached as any).name !== '알 수 없음') return cached as YearlyPlayer & { name: string };
-
     const { data: ypData, error: ypError } = await supabase
       .from('yearly_players')
       .select('*') // 조인 문구가 절대 포함되지 않도록 확인
@@ -167,10 +199,11 @@ export const db = {
         .maybeSingle();
 
       const name = pData?.name || '알 수 없음';
-      const result = { ...ypData, name };
+      const result = { ..._transformBatterStats(ypData), name };
       _setCache(cacheKey, result);
       return result as YearlyPlayer & { name: string };
     }
+    return null;
   },
 
   saveYearlyPlayer: async (data: Omit<YearlyPlayer, 'creatorId' | 'yearlyLeagueId'> & { name?: string; playerId: string; yearlyLeagueId?: string | null }) => {
@@ -182,27 +215,28 @@ export const db = {
     if (name) {
       await supabase.from('players').upsert({ id: data.playerId, name });
     }
+    const flattenedData = _flattenBatterStats(tableData);
 
     const existing = data.id ? await db.getYearlyPlayerById(data.id) : null;
 
     if (existing && existing.creatorId === user.id) {
       const { error } = await supabase
         .from('yearly_players')
-        .update({ ...tableData, creatorId: user.id })
+        .update({ ...flattenedData, creatorId: user.id })
         .eq('id', data.id);
       if (error) throw error;
       // 캐시를 삭제하는 대신 업데이트하여 이동 시 깜빡임 방지
-      _setCache(`yearlyPlayer_${data.id}`, { ...tableData, name, creatorId: user.id });
+      _setCache(`yearlyPlayer_${data.id}`, { ...data, creatorId: user.id });
       _clearCache('allYearlyPlayersWithNames');
       return { mode: 'modify', id: data.id };
     } else {
       const newId = `${data.playerId}-${data.year}-${Date.now()}`;
       const { error } = await supabase
         .from('yearly_players')
-        .insert([{ ...tableData, id: newId, creatorId: user.id }]);
+        .insert([{ ...flattenedData, id: newId, creatorId: user.id }]);
       if (error) throw error;
       // 신규 생성된 ID에 대해서도 캐시를 즉시 생성하여 페이지 이동 시 이름 누락을 방지합니다.
-      _setCache(`yearlyPlayer_${newId}`, { ...tableData, id: newId, name, creatorId: user.id });
+      _setCache(`yearlyPlayer_${newId}`, { ...data, id: newId, creatorId: user.id });
       _clearCache('allYearlyPlayersWithNames');
       return { mode: 'fork', id: newId };
     }
@@ -226,35 +260,32 @@ export const db = {
     // 사용자별 주자 통계 설정 저장 (사용자 정보가 있을 때만)
     const user = await db.getCurrentUser();
     if (user) {
-      await supabase.from('user_settings').upsert({ user_id: user.id, runner_stats: stats });
+      await supabase.from('user_settings').upsert({ user_id: user.id, ..._flattenRunnerStats({ runnerStats: stats }) });
     }
   },
 
   getLineupRunnerStats: async (): Promise<RunnerStats | null> => {
     const user = await db.getCurrentUser();
     if (!user) return null;
-    const { data } = await supabase.from('user_settings').select('runner_stats').eq('user_id', user.id).maybeSingle();
-    return data?.runner_stats || null;
+    const { data } = await supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle();
+    return _transformRunnerStats(data)?.runnerStats || null;
   },
 
   getYearlyLineupById: async (id: string) => {
     const cacheKey = `yearlyLineup_${id}`;
-    const cached = _getCache(cacheKey);
-    if (cached) return cached as YearlyLineup;
 
     const { data } = await supabase.from('yearly_lineups').select('*').eq('id', id).maybeSingle();
-    if (data) _setCache(cacheKey, data);
-    return data as YearlyLineup | null;
+    const transformed = _transformRunnerStats(data);
+    if (transformed) _setCache(cacheKey, transformed);
+    return transformed as YearlyLineup | null;
   },
 
   getAllYearlyLineups: async () => {
-    const cached = _getCache('allYearlyLineups');
-    if (cached) return cached as YearlyLineup[];
-
     const { data, error } = await supabase.from('yearly_lineups').select('*');
     if (error) throw error;
-    _setCache('allYearlyLineups', data);
-    return data as YearlyLineup[];
+    const result = data.map(_transformRunnerStats);
+    _setCache('allYearlyLineups', result);
+    return result as YearlyLineup[];
   },
 
   saveYearlyLineup: async (data: Omit<YearlyLineup, 'creatorId'>) => {
@@ -262,10 +293,11 @@ export const db = {
     if (!user) throw new Error('로그인이 필요합니다.');
     
     const existing = await db.getYearlyLineupById(data.id);
+    const flattenedData = _flattenRunnerStats(data);
     if (existing && existing.creatorId === user.id) {
       const { error } = await supabase
         .from('yearly_lineups')
-        .update({ ...data, creatorId: user.id })
+        .update({ ...flattenedData, creatorId: user.id })
         .eq('id', data.id);
       if (error) throw error;
       _clearCache(`yearlyLineup_${data.id}`);
@@ -274,7 +306,7 @@ export const db = {
     }
     
     const newId = `lineup-${Date.now()}`;
-    const { error } = await supabase.from('yearly_lineups').insert([{ ...data, id: newId, creatorId: user.id }]);
+    const { error } = await supabase.from('yearly_lineups').insert([{ ...flattenedData, id: newId, creatorId: user.id }]);
     if (error) throw error;
     _clearCache('allYearlyLineups');
     return { mode: 'fork', id: newId };
@@ -316,8 +348,8 @@ export const db = {
 
     return {
       player: player as Player,
-      playerStats: playerStats as YearlyPlayer,
-      leagueStats: leagueStats as YearlyLeague
+      playerStats: _transformBatterStats(playerStats) as YearlyPlayer,
+      leagueStats: _transformBatterStats(leagueStats) as YearlyLeague
     };
   },
 
@@ -334,14 +366,12 @@ export const db = {
 
     return (ypRes.data || []).map(yp => ({
       ...yp,
+      ..._transformBatterStats(yp),
       name: players.find(p => p.id === yp.playerId)?.name || (yp as any).name || '알 수 없음'
     })) as (YearlyPlayer & { name: string })[];
   },
 
   getAllYearlyPlayersWithNames: async () => {
-    const cached = _getCache('allYearlyPlayersWithNames');
-    if (cached) return cached as (YearlyPlayer & { name: string })[];
-
     const [ypRes, pRes] = await Promise.all([
       supabase.from('yearly_players').select('*'),
       supabase.from('players').select('id, name')
@@ -354,6 +384,7 @@ export const db = {
 
     const result = (ypRes.data || []).map(yp => ({
       ...yp,
+      ..._transformBatterStats(yp),
       name: players.find(p => p.id === yp.playerId)?.name || (yp as any).name || '알 수 없음'
     })) as (YearlyPlayer & { name: string })[];
     _setCache('allYearlyPlayersWithNames', result);

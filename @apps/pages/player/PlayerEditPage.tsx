@@ -1,12 +1,13 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Div, FixedFooter, Button, BottomSheet, vars, InputNumber, Select } from '@shared/bridges/UIBridge';
-import { PageHeader } from '../../common/components/PageHeader';
+import { YearlyLeague, YearlyPlayer } from '@packages/sit-val/types/Database';
+import { BottomSheet, Button, Div, FixedFooter, InputNumber, Select, vars } from '@shared/bridges/UIBridge';
 import BatterInput from '@sit-val/components/BatterInput';
-import { db } from '../../services/db';
-import { YearlyPlayer, YearlyLeague } from '@packages/sit-val/types/Database';
-import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
+import { BatterStats, BatterStatsData } from '@sit-val/types/BatterStats';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom'
+;
+import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../common/components/VisualizerList';
+import { db } from '../../services/db';
 import { INITIAL_BATTER_STATS } from '../PlayerPage';
 
 interface PlayerEditPageProps {
