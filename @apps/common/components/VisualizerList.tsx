@@ -137,15 +137,9 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({
   return (
     <Div
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-        border: '1px solid',
-        borderColor: vars.surface,
-        borderRadius: '8px',
-        overflow: 'hidden',
-        position: 'relative',
-        height: '100%',
+        display: 'flex', flexDirection: 'column', flex: 1,
+        border: `1px solid ${vars.surface}`, borderRadius: '8px',
+        overflow: 'hidden', position: 'relative', height: '100%', boxSizing: 'border-box'
       }}
     >
       <GenericPanelLayout

@@ -57,7 +57,7 @@ export function GenericPanelLayout<T extends { id: string }>({
   }
 
   return (
-    <Div className="generic-panel-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative', backgroundColor: vars.background }}>
+    <Div className="generic-panel-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative', backgroundColor: vars.background, boxSizing: 'border-box' }}>
       <Group orientation="horizontal" style={{ flex: 1 }}>
         {groups.flatMap((column, cIdx) => {
           const colElements: React.ReactNode[] = [
