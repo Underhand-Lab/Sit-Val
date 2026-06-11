@@ -22,6 +22,7 @@ interface GenericPanelLayoutProps<T extends { id: string }> {
   };
   maxColumns?: number;
   maxRows?: number;
+}
 
 export function GenericPanelLayout<T extends { id: string }>({
   items,
