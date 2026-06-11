@@ -52,9 +52,7 @@ export function GenericPanelLayout<T extends { id: string }>({
     setDraggedPos
   } = usePanelLayoutState(items, onReorderItems, maxColumns, maxRows);
 
-  if (items.length === 0) {
-    return <>{emptyPlaceholder}</>;
-  }
+
 
   return (
     <Div className="generic-panel-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative', backgroundColor: vars.background, boxSizing: 'border-box' }}>
