@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Panel, Group } from 'react-resizable-panels';
 import { Div, vars } from "@shared/bridges/UIBridge";
 import { usePanelLayoutState } from '../hooks/usePanelLayoutState';
-import { PanelGroup as PanelItemContainer } from './PanelGroup';
+import { PanelGroup } from './PanelGroup';
 import { ResizeHandle } from './ResizeHandle';
 
 interface GenericPanelLayoutProps<T extends { id: string }> {
@@ -22,6 +22,10 @@ interface GenericPanelLayoutProps<T extends { id: string }> {
   };
   maxColumns?: number;
   maxRows?: number;
+  /** 주입할 레이아웃 데이터 (JSON) */
+  layout?: any;
+  /** 레이아웃이나 패널 상태가 변경될 때 호출되는 콜백 (JSON 반환) */
+  onLayoutChange?: (layoutJson: any) => void;
 }
 
 export function GenericPanelLayout<T extends { id: string }>({
@@ -34,6 +38,8 @@ export function GenericPanelLayout<T extends { id: string }>({
   renderTabLabel,
   maxColumns,
   maxRows,
+  layout,
+  onLayoutChange,
 }: GenericPanelLayoutProps<T>) {
   const {
     groups,
@@ -50,8 +56,23 @@ export function GenericPanelLayout<T extends { id: string }>({
     onPanelDragLeave,
     handleDragEnd,
     setDraggedPos
-  } = usePanelLayoutState(items, onReorderItems, maxColumns, maxRows);
+  } = usePanelLayoutState(items, onReorderItems, maxColumns, maxRows, layout);
 
+  // 레이아웃 정보(구조, 활성 탭 등)를 객체 형태로 추출하여 콜백 실행
+  useEffect(() => {
+    if (onLayoutChange) {
+      // id 대신 실제 아이템(T) 객체를 tabs 배열에 담아 반환
+      const layoutWithItems = {
+        groups: groups.map(col => col.map(row => ({
+          ...row,
+          tabs: row.tabs.map(id => itemsMap[id]).filter(Boolean)
+        }))),
+        activeTabMap
+      };
+      
+      onLayoutChange(layoutWithItems);
+    }
+  }, [groups, activeTabMap, itemsMap, onLayoutChange]);
 
 
   return (
@@ -64,7 +85,7 @@ export function GenericPanelLayout<T extends { id: string }>({
                 {column.flatMap((row, rIdx) => {
                   const rowElements: React.ReactNode[] = [
                     <Panel key={row.id} id={row.id} defaultSize={100 / column.length} minSize={15}>
-                      <PanelItemContainer
+                      <PanelGroup
                         cIdx={cIdx} rIdx={rIdx} group={row.tabs} itemsMap={itemsMap}
                         activeTabId={activeTabMap[row.id]}
                         onSelectTab={(id) => setActiveTabMap(prev => ({ ...prev, [row.id]: id }))}
