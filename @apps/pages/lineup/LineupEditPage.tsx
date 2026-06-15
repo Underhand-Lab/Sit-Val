@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { Box, Div, Button, FixedFooter, BottomSheet, InputNumber, vars } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
-import { VisualizerList } from '../../common/components/VisualizerList';
+import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
 import RunnerInput, { RunnerInputHandle } from '@sit-val/components/RunnerInput';
 import { db } from '../../services/db';

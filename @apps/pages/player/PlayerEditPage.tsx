@@ -6,7 +6,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom'
 ;
 import { PageHeader } from '../../common/components/PageHeader';
-import { VisualizerList } from '../../common/components/VisualizerList';
+import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 import { db } from '../../services/db';
 import { INITIAL_BATTER_STATS } from '../PlayerPage';
 

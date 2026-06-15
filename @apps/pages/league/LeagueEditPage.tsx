@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Div, Button, FixedFooter, BottomSheet, vars, InputNumber } from '@shared/bridges/UIBridge';
 import { PageHeader } from '../../common/components/PageHeader';
-import { VisualizerList } from '../../common/components/VisualizerList';
+import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 import BatterInput from '@sit-val/components/BatterInput';
 import RunnerInput from '@sit-val/components/RunnerInput';
 import { BatterStatsData } from '@sit-val/types/BatterStats';

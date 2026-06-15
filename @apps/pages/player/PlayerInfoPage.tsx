@@ -4,7 +4,7 @@ import { BatterStats } from '@sit-val/types/BatterStats';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../common/components/PageHeader';
-import { VisualizerList } from '../../common/components/VisualizerList';
+import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 
 interface PlayerInfoPageProps {
   id: string;
