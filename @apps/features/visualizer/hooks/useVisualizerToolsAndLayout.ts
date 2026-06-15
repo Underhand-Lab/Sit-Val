@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { SerializedPanelLayout, PanelLayout } from '@packages/new-panel-layout/components/GenericPanelLayout';
+import { SerializedPanelLayout, PanelLayout } from '@packages/panel-layout/components/GenericPanelLayout';
 
 interface VisualizerTool {
   id?: string;

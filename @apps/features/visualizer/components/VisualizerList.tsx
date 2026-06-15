@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { Div, BottomSheet, vars } from '@shared/bridges/UIBridge';
-import { GenericPanelLayout, SerializedPanelLayout, GenericPanelLayoutHandle, PanelLayout } from '@packages/new-panel-layout/components/GenericPanelLayout';
+import { GenericPanelLayout, SerializedPanelLayout, GenericPanelLayoutHandle, PanelLayout } from '@packages/panel-layout/components/GenericPanelLayout';
 import { useVisualizerAddSheet } from '../hooks/useVisualizerAddSheet';
 import { useVisualizerToolsAndLayout } from '../hooks/useVisualizerToolsAndLayout';
  
