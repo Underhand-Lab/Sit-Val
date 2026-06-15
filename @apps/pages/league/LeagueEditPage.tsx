@@ -20,20 +20,20 @@ interface LeagueEditPageProps {
 	setLeagueRunnerStats: (val: RunnerStats) => void;
 	handleSave: () => void;
 	isMetaValid: boolean;
-	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>;
-	onRemoveTool: (id: string) => void;
+	activeTools: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
+	setActiveTools: (tools: any) => void;
 	vizData: any;
 	isToolMenuOpen: boolean;
 	setIsToolMenuOpen: (val: boolean) => void;
-	addTool: (option: { name: string, Component: React.ComponentType<any>, props?: any }) => void;
-	toolOptions: Array<{ name: string, Component: React.ComponentType<any>, props?: any }>;
+	addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+	toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const LeagueEditPage: React.FC<LeagueEditPageProps> = ({
 	id, leagueIdInput, setLeagueIdInput, selectedYear, setSelectedYear,
 	leagueBatterStats, setLeagueBatterStats, leagueRunnerStats, setLeagueRunnerStats,
-	handleSave, isMetaValid, activeTools, vizData, isToolMenuOpen, setIsToolMenuOpen, 
-	addTool, toolOptions, onRemoveTool
+	handleSave, isMetaValid, activeTools, setActiveTools, vizData, isToolMenuOpen, setIsToolMenuOpen, 
+	addTool, toolOptions
 }) => {
 	const navigate = useNavigate();
 
@@ -57,9 +57,12 @@ const LeagueEditPage: React.FC<LeagueEditPageProps> = ({
 				<VisualizerList 
 					tools={activeTools} 
 					data={vizData} 
-					onRemove={onRemoveTool} 
+					onToolsSync={setActiveTools}
 					toolOptions={toolOptions}
 					onAddTool={addTool}
+					isToolMenuOpen={isToolMenuOpen}
+					setIsToolMenuOpen={setIsToolMenuOpen}
+					storageKey="league-visualizer-layout"
 				/>
 			</Div>
 

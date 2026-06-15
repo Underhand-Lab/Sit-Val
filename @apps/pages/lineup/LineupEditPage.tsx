@@ -27,20 +27,20 @@ interface LineupEditPageProps {
 	setLineupOrder: React.Dispatch<React.SetStateAction<string[]>>;
 	lineupRunnerStats: RunnerStats;
 	setLineupRunnerStats: (val: RunnerStats) => void;
-	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
-	onRemoveTool: (id: string) => void;
+	activeTools: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
+	setActiveTools: (tools: any) => void;
 	vizData: any;
 	setIsToolMenuOpen: (val: boolean) => void;
 	isToolMenuOpen: boolean; // Add this line
-	addTool: (option: { name: string, Component: React.ComponentType<any> }) => void;
-	toolOptions: Array<{ name: string, Component: React.ComponentType<any> }>;
+	addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+	toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const LineupEditPage: React.FC<LineupEditPageProps> = ({
 	id, lineupName, setLineupName, selectedYear, setSelectedYear, availablePlayers, setAvailablePlayers,
 	currentLineupPlayers, setCurrentLineupPlayers, lineupOrder, setLineupOrder,
-	lineupRunnerStats, setLineupRunnerStats, isToolMenuOpen, setIsToolMenuOpen,
-	activeTools, onRemoveTool, vizData, addTool, toolOptions
+	lineupRunnerStats, setLineupRunnerStats, isToolMenuOpen, setIsToolMenuOpen, setActiveTools,
+	activeTools, vizData, addTool, toolOptions
 }) => {
 	const navigate = useNavigate();
 	const batterRef = useRef<BatterInputHandle>(null);
@@ -188,9 +188,12 @@ const LineupEditPage: React.FC<LineupEditPageProps> = ({
 			<VisualizerList 
 				tools={activeTools} 
 				data={vizData} 
-				onRemove={onRemoveTool} 
+				onToolsSync={setActiveTools}
 				toolOptions={toolOptions}
 				onAddTool={addTool}
+				isToolMenuOpen={isToolMenuOpen}
+				setIsToolMenuOpen={setIsToolMenuOpen}
+				storageKey="lineup-visualizer-layout"
 			/>
 
 			<BottomSheet isOpen={isLineupEditOpen} onClose={() => setLineupEditOpen(false)} title="타순 설정">

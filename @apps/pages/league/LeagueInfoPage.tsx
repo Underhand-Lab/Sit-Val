@@ -8,17 +8,17 @@ interface LeagueInfoPageProps {
 	id: string;
 	leagueIdInput: string;
 	selectedYear: number;
-	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>;
-	onRemoveTool: (id: string) => void;
+	activeTools: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
+	setActiveTools: (tools: any) => void;
 	vizData: any;
 	isToolMenuOpen: boolean;
 	setIsToolMenuOpen: (val: boolean) => void;
-	addTool: (option: { name: string, Component: React.ComponentType<any>, props?: any }) => void;
-	toolOptions: Array<{ name: string, Component: React.ComponentType<any>, props?: any }>;
+	addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+	toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
-	id, leagueIdInput, selectedYear, activeTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions, onRemoveTool
+	id, leagueIdInput, selectedYear, activeTools, setActiveTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions
 }) => {
 	const navigate = useNavigate();
 	return (
@@ -36,9 +36,12 @@ const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
 				<VisualizerList 
 					tools={activeTools} 
 					data={vizData} 
-					onRemove={onRemoveTool} 
+					onToolsSync={setActiveTools}
 					toolOptions={toolOptions}
 					onAddTool={addTool}
+					isToolMenuOpen={isToolMenuOpen}
+					setIsToolMenuOpen={setIsToolMenuOpen}
+					storageKey="league-visualizer-layout"
 				/>
 			</Div>
 

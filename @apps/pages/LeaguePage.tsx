@@ -28,11 +28,11 @@ const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr:
 const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
 
 const TOOL_OPTIONS = [
-	{ name: '리그 정보', Component: LeagueVisualizer },
-	{ name: 'RE24', Component: RE24Visualizer },
-	{ name: '득점 확률', Component: LeagueBigInningVisualizer },
-	{ name: '타구 가치', Component: RunValueVisualizer },
-	{ name: '개인 가치', Component: PersonalVisualizer },
+	{ type: 'league-info', name: '리그 정보', Component: LeagueVisualizer },
+	{ type: 'league-re24', name: 'RE24', Component: RE24Visualizer },
+	{ type: 'league-big-inning', name: '득점 확률', Component: LeagueBigInningVisualizer },
+	{ type: 'league-run-value', name: '타구 가치', Component: RunValueVisualizer },
+	{ type: 'league-personal', name: '개인 가치', Component: PersonalVisualizer },
 ];
 
 function LeaguePage() {
@@ -46,10 +46,10 @@ function LeaguePage() {
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 	const [selectedYear, setSelectedYear] = useState<number>(2024), [leagueIdInput, setLeagueIdInput] = useState<string>('kbo');
 	const [vizData, setVizData] = useState<[RECalculationResult, Calc.WOBAWeights, number, number, number, BasicStats] | null>(null);
-	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>>([
-		{ id: '1', name: '리그 정보', Component: LeagueVisualizer },
-		{ id: '2', name: '타구 가치', Component: RunValueVisualizer }, 
-		{ id: '3', name: '개인 가치', Component: PersonalVisualizer }
+	const [activeTools, setActiveTools] = useState<Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>>([
+		{ type: 'league-info', name: '리그 정보', Component: LeagueVisualizer },
+		{ type: 'league-run-value', name: '타구 가치', Component: RunValueVisualizer }, 
+		{ type: 'league-personal', name: '개인 가치', Component: PersonalVisualizer }
 	]);
 
 	useEffect(() => {
@@ -94,13 +94,9 @@ function LeaguePage() {
 		fetchData();
 	}, [id, searchParams]);
 
-	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
-		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
+	const addTool = (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => {
+		setActiveTools(prev => [...prev, { type: option.type, name: option.name, Component: option.Component, props: option.props }]);
 		setIsToolMenuOpen(false);
-	};
-
-	const onRemoveTool = (id: string) => {
-		setActiveTools(prev => prev.filter(t => t.id !== id));
 	};
 
 	const execute = useCallback(() => {
@@ -148,7 +144,7 @@ function LeaguePage() {
 			handleSave={handleSave}
 			isMetaValid={isMetaValid}
 			activeTools={activeTools}
-			onRemoveTool={onRemoveTool}
+			setActiveTools={setActiveTools}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}
@@ -159,7 +155,7 @@ function LeaguePage() {
 			leagueIdInput={leagueIdInput}
 			selectedYear={selectedYear}
 			activeTools={activeTools}
-			onRemoveTool={onRemoveTool}
+			setActiveTools={setActiveTools}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}

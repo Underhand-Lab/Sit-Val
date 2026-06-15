@@ -21,18 +21,18 @@ interface PlayerEditPageProps {
   setCurrentBatterStats: (stats: BatterStatsData) => void;
   yearlyLeagueId: string;
   setYearlyLeagueId: (id: string) => void;
-  activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>;
-  onRemoveTool: (id: string) => void;
+  activeTools: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
+  setActiveTools: (tools: any) => void;
   vizData: any;
   isToolMenuOpen: boolean;
   setIsToolMenuOpen: (val: boolean) => void;
-  addTool: (option: { name: string, Component: React.ComponentType<any>, props?: any }) => void;
-  toolOptions: Array<{ name: string, Component: React.ComponentType<any>, props?: any }>;
+  addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+  toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
   id, playerYearlyStats, playerName, setPlayerName, selectedYear, setSelectedYear, currentBatterStats, setCurrentBatterStats,
-  yearlyLeagueId, setYearlyLeagueId, activeTools = [], onRemoveTool, vizData, isToolMenuOpen, setIsToolMenuOpen, 
+  yearlyLeagueId, setYearlyLeagueId, activeTools = [], setActiveTools, vizData, isToolMenuOpen, setIsToolMenuOpen, 
   addTool, toolOptions
 }) => {
   const navigate = useNavigate();
@@ -100,23 +100,24 @@ const PlayerEditPage: React.FC<PlayerEditPageProps> = ({
     return newData;
   }, [vizData, currentBatterStats]);
 
-  // 분석 도구들에 현재 편집 중인 실시간 스탯을 주입합니다.
-  const toolsWithStats = useMemo(() => {
-    return activeTools.map(tool => ({
-      ...tool,
-      props: { ...tool.props, batterStats: new BatterStats(currentBatterStats || INITIAL_BATTER_STATS) }
-    }));
-  }, [activeTools, currentBatterStats]);
+  // 실시간으로 변하는 공통 Props만 별도로 메모이제이션합니다.
+  const commonItemProps = useMemo(() => ({
+    batterStats: new BatterStats(currentBatterStats || INITIAL_BATTER_STATS)
+  }), [currentBatterStats]);
 
   return (
     <Div id="wrapper">
       <PageHeader title={`${playerName} (${selectedYear})`} subTitle={id} isEditMode={true} onEditToggle={() => navigate(-1)} onSave={handleSave} showSave={true} isSaveDisabled={!isMetaValid} />
       <VisualizerList 
-        tools={toolsWithStats} 
+        tools={activeTools} 
         data={mergedVizData} 
-        onRemove={onRemoveTool || (() => {})} 
+        commonItemProps={commonItemProps}
+        onToolsSync={setActiveTools}
         toolOptions={toolOptions || []}
         onAddTool={addTool}
+        isToolMenuOpen={isToolMenuOpen}
+        setIsToolMenuOpen={setIsToolMenuOpen}
+        storageKey="player-visualizer-layout"
       />
 
       <BottomSheet isOpen={isMetaOpen} onClose={() => setIsMetaOpen(false)} title={`${playerName} 정보 설정`}>

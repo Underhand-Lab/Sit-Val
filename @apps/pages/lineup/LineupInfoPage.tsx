@@ -9,17 +9,17 @@ interface LineupInfoPageProps {
 	id: string;
 	lineupName: string;
 	selectedYear: number;
-	activeTools: Array<{ id: string, name: string, Component: React.ComponentType<any> }>;
+	activeTools: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
+	setActiveTools: (tools: any) => void;
 	vizData: any;
 	isToolMenuOpen: boolean;
 	setIsToolMenuOpen: (val: boolean) => void;
-	addTool: (option: { name: string, Component: React.ComponentType<any> }) => void;
-	toolOptions: Array<{ name: string, Component: React.ComponentType<any> }>;
-	onRemoveTool: (id: string) => void;
+	addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+	toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const LineupInfoPage: React.FC<LineupInfoPageProps> = ({
-	id, lineupName, selectedYear, activeTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions, onRemoveTool
+	id, lineupName, selectedYear, activeTools, setActiveTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions
 }) => {
 	const navigate = useNavigate();
 	return (
@@ -35,9 +35,12 @@ const LineupInfoPage: React.FC<LineupInfoPageProps> = ({
 			<VisualizerList 
 				tools={activeTools} 
 				data={vizData} 
-				onRemove={onRemoveTool} 
+				onToolsSync={setActiveTools}
 				toolOptions={toolOptions}
 				onAddTool={addTool}
+				isToolMenuOpen={isToolMenuOpen}
+				setIsToolMenuOpen={setIsToolMenuOpen}
+				storageKey="lineup-visualizer-layout"
 			/>
 			<FixedFooter>
 				<Box className="container">
