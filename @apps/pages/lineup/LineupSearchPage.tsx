@@ -10,14 +10,17 @@ const LineupSearchPage: React.FC = () => {
 	const navigate = useNavigate();
 	const [lineups, setLineups] = useState<YearlyLineup[]>(db.getSyncCache('allYearlyLineups') || []);
 	const [isLoading, setIsLoading] = useState(lineups.length === 0);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const loadLineups = useCallback(async () => {
 		try {
 			setIsLoading(true);
+			setErrorMessage(null);
 			const data = await db.getAllYearlyLineups();
 			setLineups(data);
 		} catch (e) {
 			console.error("데이터 로드 실패:", e);
+			setErrorMessage(e instanceof Error ? e.message : '라인업 데이터를 읽는 중 알 수 없는 오류가 발생했습니다.');
 		} finally {
 			setIsLoading(false);
 		}
@@ -44,6 +47,7 @@ const LineupSearchPage: React.FC = () => {
 			items={lineups}
 			createPath="/lineup/new"
 			isLoading={isLoading}
+			errorMessage={errorMessage}
 			onDeleteItem={handleDeleteLineup}
 			renderItem={(l, isCreator, onDelete) => (
 				<ListItemCard onClick={() => navigate(`/lineup/${l.id}`)}>

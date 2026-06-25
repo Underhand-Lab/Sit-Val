@@ -13,14 +13,17 @@ const LeagueSearchPage: React.FC = () => {
 	const navigate = useNavigate();
 	const [leagues, setLeagues] = useState<YearlyLeague[]>(db.getSyncCache('yearlyLeagues_kbo') || []);
 	const [isLoading, setIsLoading] = useState(leagues.length === 0);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const loadLeagues = useCallback(async () => {
 		try {
 			setIsLoading(true);
+			setErrorMessage(null);
 			const data = await db.getYearlyLeagues('kbo');
 			setLeagues(data);
 		} catch (e) {
 			console.error("데이터 로드 실패:", e);
+			setErrorMessage(e instanceof Error ? e.message : '리그 데이터를 읽는 중 알 수 없는 오류가 발생했습니다.');
 		} finally {
 			setIsLoading(false);
 		}
@@ -47,6 +50,7 @@ const LeagueSearchPage: React.FC = () => {
 			items={leagues}
 			createPath="/league/new"
 			isLoading={isLoading}
+			errorMessage={errorMessage}
 			onDeleteItem={handleDeleteLeague}
 			renderItem={(l, isCreator, onDelete) => (
 				<ListItemCard onClick={() => navigate(`/league/${l.id}`)}>

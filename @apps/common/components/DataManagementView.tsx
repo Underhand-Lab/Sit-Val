@@ -3,6 +3,7 @@ import { Box, Div, Button, H3, vars } from '@shared/bridges/UIBridge';
 import { useNavigate } from 'react-router-dom';
 import * as Hangul from 'hangul-js';
 import { db } from '../../services/db';
+import { StatusMessage } from './StatusMessage';
 
 interface Props<T> {
   title: string; // 페이지 제목
@@ -11,9 +12,10 @@ interface Props<T> {
   renderItem: (item: T & { creatorId?: string }, isCreator: boolean, onDeleteItem: (id: string) => void) => React.ReactNode; // 아이템 렌더링 함수
   onDeleteItem?: (id: string) => void; // 아이템 삭제 콜백
   isLoading?: boolean; // 로딩 상태 추가
+  errorMessage?: string | null;
 }
 
-export const DataManagementView = <T extends { id: string }>({ title, items, createPath, renderItem, onDeleteItem, isLoading }: Props<T>) => {
+export const DataManagementView = <T extends { id: string }>({ title, items, createPath, renderItem, onDeleteItem, isLoading, errorMessage }: Props<T>) => {
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
 
@@ -93,11 +95,13 @@ export const DataManagementView = <T extends { id: string }>({ title, items, cre
       <Box style={{ padding: '10px' }}>
         <Div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {isLoading ? (
-            <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>로딩 중...</p>
+            <StatusMessage title="목록을 불러오는 중..." description="저장된 분석 데이터를 읽고 있습니다." />
+          ) : errorMessage ? (
+            <StatusMessage title="목록을 불러오지 못했습니다." description={errorMessage} tone="error" />
           ) : items.length === 0 ? (
-            <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>등록된 정보가 없습니다.</p>
+            <StatusMessage title="등록된 정보가 없습니다." description="새로 생성 버튼으로 첫 분석을 추가할 수 있습니다." />
           ) : filteredItems.length === 0 ? (
-            <p style={{ textAlign: 'center', opacity: 0.5, padding: '40px 0' }}>검색 결과가 없습니다.</p>
+            <StatusMessage title="검색 결과가 없습니다." description="이름, 연도, ID 키워드를 조금 바꿔서 다시 찾아보세요." />
           ) : (
             filteredItems.map(item => {
               const isCreator = currentUser && item.creatorId === currentUser.id;

@@ -10,14 +10,17 @@ const PlayerSearchPage: React.FC = () => {
 	const navigate = useNavigate();
 	const [players, setPlayers] = useState<(YearlyPlayer & { name: string })[]>(db.getSyncCache('allYearlyPlayersWithNames') || []);
 	const [isLoading, setIsLoading] = useState(players.length === 0);
+	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
 	const loadPlayers = useCallback(async () => {
 		try {
 			setIsLoading(true);
+			setErrorMessage(null);
 			const data = await db.getAllYearlyPlayersWithNames();
 			setPlayers(data);
 		} catch (e) {
 			console.error("데이터 로드 실패:", e);
+			setErrorMessage(e instanceof Error ? e.message : '선수 데이터를 읽는 중 알 수 없는 오류가 발생했습니다.');
 		} finally {
 			setIsLoading(false);
 		}
@@ -44,6 +47,7 @@ const PlayerSearchPage: React.FC = () => {
 			items={players as (YearlyPlayer & { creatorId?: string })[]}
 			createPath="/player/new"
 			isLoading={isLoading}
+			errorMessage={errorMessage}
 			onDeleteItem={handleDeletePlayer}
 			renderItem={(p, isCreator, onDelete) => (
 				<ListItemCard onClick={() => navigate(`/player/${p.id}`)}>

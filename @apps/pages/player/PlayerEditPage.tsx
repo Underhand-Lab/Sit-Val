@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom'
 import { PageHeader } from '../../common/components/PageHeader';
 import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 import { db } from '../../services/db';
-import { INITIAL_BATTER_STATS } from '../PlayerPage';
+import { INITIAL_BATTER_STATS } from '../hooks/usePlayerPageModel';
 
 interface PlayerEditPageProps {
   id: string;

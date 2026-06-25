@@ -9,7 +9,7 @@ import { db } from '../../services/db';
 import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
 import { ExtendedBatterStats, YearlyPlayer, Player } from '@packages/sit-val/types/Database';
-import { LineupPlayerDisplay } from '../LineupPage';
+import { LineupPlayerDisplay } from '../hooks/useLineupPageModel';
 import { ListItemCard } from '../../common/components/ListItemCard';
 import * as Hangul from 'hangul-js';
 
