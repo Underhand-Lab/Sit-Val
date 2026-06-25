@@ -4,7 +4,7 @@ import { BatterStats } from '@sit-val/types/BatterStats';
 import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../common/components/PageHeader';
-import { VisualizerList } from '../../common/components/VisualizerList';
+import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 
 interface PlayerInfoPageProps {
   id: string;
@@ -12,30 +12,23 @@ interface PlayerInfoPageProps {
   playerInfo: YearlyPlayer | null;
   selectedYear: number;
   leagueData: YearlyLeague | null;
-  activeTools: Array<{ id: string; name: string; Component: React.ComponentType<any>; props?: any }>;
+  activeTools: Array<{ type: string; name: string; Component: React.ComponentType<any>; props?: any }>;
+  setActiveTools: (tools: any) => void;
   vizData: any;
-  onRemoveTool: (id: string) => void;
   isToolMenuOpen: boolean;
   setIsToolMenuOpen: (val: boolean) => void;
-  addTool: (option: { name: string, Component: React.ComponentType<any>, props?: any }) => void;
-  toolOptions: Array<{ name: string, Component: React.ComponentType<any>, props?: any }>;
+  addTool: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => void;
+  toolOptions: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>;
 }
 
 const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
-  id, playerName, playerInfo, selectedYear, leagueData, activeTools = [], vizData, onRemoveTool, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions
+  id, playerName, playerInfo, selectedYear, leagueData, activeTools = [], setActiveTools, vizData, isToolMenuOpen, setIsToolMenuOpen, addTool, toolOptions
 }) => {
   const navigate = useNavigate();
 
-  // 분석 도구들에 현재 선수의 스탯을 주입합니다.
-  const toolsWithStats = useMemo(() => {
-    return activeTools.map(tool => ({
-      ...tool,
-      props: { 
-        ...tool.props, 
-        batterStats: playerInfo?.stats ? new BatterStats(playerInfo.stats) : undefined 
-      }
-    }));
-  }, [activeTools, playerInfo]);
+  const commonItemProps = useMemo(() => ({
+    batterStats: playerInfo?.stats ? new BatterStats(playerInfo.stats) : undefined
+  }), [playerInfo]);
 
   return (
     <Div id="wrapper">
@@ -48,11 +41,15 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
         showSave={false} 
       />
       <VisualizerList 
-        tools={toolsWithStats} 
+        tools={activeTools} 
         data={vizData} 
-        onRemove={onRemoveTool || (() => {})} 
+        commonItemProps={commonItemProps}
+        onToolsSync={setActiveTools}
         toolOptions={toolOptions || []}
         onAddTool={addTool}
+        isToolMenuOpen={isToolMenuOpen}
+        setIsToolMenuOpen={setIsToolMenuOpen}
+        storageKey="player-visualizer-layout"
       />
       <FixedFooter style={{ backgroundColor: vars.box, borderTop: `1px solid ${vars.surface}` }}>
         <Div style={{ display: 'flex', gap: '10px', padding: '15px', justifyContent: 'center' }}>

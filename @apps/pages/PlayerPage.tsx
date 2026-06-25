@@ -17,8 +17,8 @@ import PlayerPersonalVisualizer from '../features/player/components/PlayerPerson
 import { db } from '../services/db';
 
 const TOOL_OPTIONS = [
-  { name: '기본 타격 지표', Component: PlayerBasicVisualizer },
-  { name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
+  { type: 'player-basic', name: '기본 타격 지표', Component: PlayerBasicVisualizer },
+  { type: 'player-personal', name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
 ];
 
 // 서브 페이지 임포트
@@ -55,18 +55,15 @@ const PlayerPage: React.FC = () => {
   const [vizData, setVizData] = useState<any>(null);
   const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-  const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
-    { id: '2', name: '기본 타격 지표', Component: PlayerBasicVisualizer },
-    { id: '1', name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
+  // 초기 도구 설정 (저장된 값이 없을 때만 사용됨)
+  const [activeTools, setActiveTools] = useState<Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
+    { type: 'player-basic', name: '기본 타격 지표', Component: PlayerBasicVisualizer },
+    { type: 'player-personal', name: '개인 확장 가치', Component: PlayerPersonalVisualizer },
   ]);
 
-  const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
-    setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
+  const addTool = (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => {
+    setActiveTools(prev => [...prev, { type: option.type, name: option.name, Component: option.Component, props: option.props }]);
     setIsToolMenuOpen(false);
-  };
-
-  const onRemoveTool = (id: string) => {
-    setActiveTools(prev => prev.filter(t => t.id !== id));
   };
 
   useEffect(() => {
@@ -149,7 +146,7 @@ const PlayerPage: React.FC = () => {
       currentBatterStats={currentBatterStats} setCurrentBatterStats={setCurrentBatterStats}
       yearlyLeagueId={yearlyLeagueId} setYearlyLeagueId={setYearlyLeagueId}
       activeTools={activeTools}
-      onRemoveTool={onRemoveTool}
+      setActiveTools={setActiveTools}
       vizData={vizData}
       isToolMenuOpen={isToolMenuOpen}
       setIsToolMenuOpen={setIsToolMenuOpen}
@@ -164,8 +161,8 @@ const PlayerPage: React.FC = () => {
       selectedYear={selectedYear}
       leagueData={leagueData}
       activeTools={activeTools}
+      setActiveTools={setActiveTools}
       vizData={vizData}
-      onRemoveTool={onRemoveTool}
       isToolMenuOpen={isToolMenuOpen}
       setIsToolMenuOpen={setIsToolMenuOpen}
       addTool={addTool}

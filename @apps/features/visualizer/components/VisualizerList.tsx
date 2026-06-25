@@ -1,72 +1,68 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { Div, BottomSheet, vars } from '@shared/bridges/UIBridge';
-import { GenericPanelLayout } from '@packages/panel-layout/components/GenericPanelLayout';
-
+import { GenericPanelLayout, SerializedPanelLayout, GenericPanelLayoutHandle, PanelLayout } from '@packages/panel-layout/components/GenericPanelLayout';
+import { useVisualizerAddSheet } from '../hooks/useVisualizerAddSheet';
+import { useVisualizerToolsAndLayout } from '../hooks/useVisualizerToolsAndLayout';
+ 
 interface VisualizerListProps {
-  tools: Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
+  tools: Array<{ id?: string, type: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
   data: any;
-  onRemove: (id: string) => void;
-  toolOptions?: Array<{ name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
-  onAddTool?: (option: { name: string, Component: React.ComponentType<any>, props?: Record<string, any> }) => void;
+  toolOptions?: Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
+  onAddTool?: (option: { type: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }) => void;
+  storageKey?: string;
+  isToolMenuOpen?: boolean;
+  setIsToolMenuOpen?: (val: boolean) => void;
+  onLayoutChange?: (layout: SerializedPanelLayout) => void;
+  onToolsSync?: (tools: VisualizerListProps['tools']) => void;
+  commonItemProps?: Record<string, any>;
 }
 
-export const VisualizerList: React.FC<VisualizerListProps> = ({
-  tools = [],
+export const VisualizerList: React.FC<VisualizerListProps> = memo(({
+  tools,
   data,
-  onRemove,
   toolOptions,
   onAddTool,
+  storageKey,
+  isToolMenuOpen,
+  setIsToolMenuOpen,
+  onLayoutChange,
+  onToolsSync,
+  commonItemProps,
 }) => {
-  const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
   const resolveRef = useRef<((value: any) => void) | null>(null);
-  const prevToolsRef = useRef(tools);
+  const layoutRef = useRef<GenericPanelLayoutHandle<any>>(null);
+  
+  const {
+    isAddSheetOpen,
+    handleAddItem,
+    handleSelectToolOption,
+    handleCloseSheet,
+  } = useVisualizerAddSheet({
+    isToolMenuOpen,
+    setIsToolMenuOpen,
+    toolOptions,
+    onAddTool,
+    resolveRef,
+  });
 
-  // tools 배열이 증가할 때(즉, 새로운 도구가 성공적으로 상위 상태에 추가되었을 때)
-  // 대기 중인 promise를 해당 도구 오브젝트로 resolve 해줍니다.
-  useEffect(() => {
-    if (tools.length > prevToolsRef.current.length && resolveRef.current) {
-      const prevIds = new Set(prevToolsRef.current.map((t) => t.id));
-      const newTool = tools.find((t) => !prevIds.has(t.id));
-      if (newTool) {
-        resolveRef.current(newTool);
-        resolveRef.current = null;
-      }
-    }
-    prevToolsRef.current = tools;
-  }, [tools]);
-
-  const handleAddItem = useCallback(() => {
-    if (!toolOptions || toolOptions.length === 0 || !onAddTool) {
-      return Promise.resolve(undefined);
-    }
-    setIsAddSheetOpen(true);
-    return new Promise<any>((resolve) => {
-      resolveRef.current = resolve;
-    });
-  }, [toolOptions, onAddTool]);
-
-  const handleSelectToolOption = useCallback((option: any) => {
-    setIsAddSheetOpen(false);
-    if (onAddTool) {
-      onAddTool(option);
-    } else {
-      if (resolveRef.current) {
-        resolveRef.current(undefined);
-        resolveRef.current = null;
-      }
-    }
-  }, [onAddTool]);
-
-  const handleCloseSheet = useCallback(() => {
-    setIsAddSheetOpen(false);
-    if (resolveRef.current) {
-      resolveRef.current(undefined);
-      resolveRef.current = null;
-    }
-  }, []);
+  const {
+    initialLayout,
+    reconciledTools,
+    isLayoutReady,
+    setIsLayoutReady,
+    handleLayoutChange,
+    layoutToInject,
+  } = useVisualizerToolsAndLayout({
+    tools,
+    toolOptions,
+    storageKey,
+    onLayoutChange,
+    onToolsSync,
+    resolveRef,
+  });
 
   const renderItem = useCallback(
-    (tool: any) => {
+    (tool: any, _id: string, _handlers: any) => {
       const Component = tool.Component;
       if (!Component) return null;
 
@@ -94,7 +90,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({
         const ActiveComponent = Component as React.ComponentType<any>;
         return (
           <Div style={{ width: '100%', height: '100%', overflowY: 'auto', backgroundColor: vars.box, padding: '24px', boxSizing: 'border-box' }}>
-            <ActiveComponent data={data} {...(tool.props || {})} />
+            <ActiveComponent data={data} {...(tool.props || {})} {...commonItemProps} />
           </Div>
         );
       }
@@ -108,7 +104,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({
     [data]
   );
 
-  const renderTabLabel = useCallback((tool: any, isActive: boolean) => {
+  const renderTabLabel = useCallback((tool: any, isActive: boolean, _id: string) => {
     return (
       <span style={{ fontSize: '14px', color: vars.text, fontWeight: isActive ? 'bold' : 'normal' }}>
         {tool.name}
@@ -133,23 +129,35 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({
       <p style={{ fontSize: '12px' }}>상단에서 도구를 추가하여 분석을 시작하세요.</p>
     </Div>
   );
-
+  
   return (
-    <Div
-      style={{
-        display: 'flex', flexDirection: 'column', flex: 1,
-        border: `1px solid ${vars.surface}`, borderRadius: '8px',
-        overflow: 'hidden', position: 'relative', height: '100%', boxSizing: 'border-box'
-      }}
-    >
-      <GenericPanelLayout
-        items={tools}
-        renderItem={renderItem}
-        renderTabLabel={renderTabLabel}
-        onRemoveItem={onRemove}
-        onAddItem={toolOptions && onAddTool ? handleAddItem : undefined}
-        emptyPlaceholder={emptyPlaceholder}
-      />
+    <>
+      <Div
+        style={{
+          display: 'flex', flexDirection: 'column', flex: 1,
+          border: `1px solid ${vars.surface}`, borderRadius: '8px',
+          overflow: 'hidden', position: 'relative', height: '100%', boxSizing: 'border-box'
+        }}
+      >
+        <GenericPanelLayout
+          ref={layoutRef}
+          // 중요: 초기화 전에는 스토리지에서 복구된 도구(ID 일치 보장)를 사용하고,
+          // 동기화가 완료되면 부모의 최신 tools 상태를 사용합니다.
+          items={isLayoutReady ? tools : reconciledTools}
+          renderItem={renderItem}
+          renderTabLabel={renderTabLabel}
+          onRemoveItem={(tool) => {
+            onToolsSync?.(tools.filter(t => t !== tool));
+          }}
+          onAddItem={toolOptions && onAddTool ? handleAddItem : undefined}
+          emptyPlaceholder={emptyPlaceholder}
+          // 중요: 이미 초기화가 끝났다면 layout prop을 undefined로 전달하여
+          // 엔진이 내부 상태(현재 배치)를 유지하도록 합니다.
+          layout={layoutToInject}
+          onLayoutChange={handleLayoutChange}
+          onLayoutChangeEnd={handleLayoutChange}
+        />
+      </Div>
 
       {toolOptions && (
         <BottomSheet
@@ -188,6 +196,6 @@ export const VisualizerList: React.FC<VisualizerListProps> = ({
           </Div>
         </BottomSheet>
       )}
-    </Div>
+    </>
   );
-};
+});

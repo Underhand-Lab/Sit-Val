@@ -25,10 +25,10 @@ export interface LineupPlayerDisplay extends YearlyPlayer {
 }
 
 const TOOL_OPTIONS = [
-	{ name: '라인업 정보', Component: LineupVisualizer },
-	{ name: '선두타자 분석', Component: LeadoffVisualizer },
-	{ name: '팀 RE24', Component: LineupRE24 }, // Keeping RE24 separate
-	{ name: '득점 확률', Component: LineupBigInningVisualizer },
+	{ type: 'lineup-info', name: '라인업 정보', Component: LineupVisualizer },
+	{ type: 'lineup-leadoff', name: '선두타자 분석', Component: LeadoffVisualizer },
+	{ type: 'lineup-re24', name: '팀 RE24', Component: LineupRE24 },
+	{ type: 'lineup-big-inning', name: '득점 확률', Component: LineupBigInningVisualizer },
 ];
 
 const INITIAL_RUNNER_STATS: RunnerStats = {
@@ -45,9 +45,9 @@ const NewLineupPage: React.FC = () => {
 	const [searchParams] = useSearchParams();
 
 	const [isLoading, setIsLoading] = useState(true);
-	const [activeTools, setActiveTools] = useState<Array<{ id: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
-		{ id: '1', name: '라인업 정보', Component: LineupVisualizer },
-		{ id: '2', name: '팀 RE24', Component: LineupRE24 }, // Keeping RE24 separate
+	const [activeTools, setActiveTools] = useState<Array<{ type: string, name: string, Component: React.ComponentType<any>, props?: any }>>([
+		{ type: 'lineup-info', name: '라인업 정보', Component: LineupVisualizer },
+		{ type: 'lineup-re24', name: '팀 RE24', Component: LineupRE24 },
 	]);
 	const [vizData, setVizData] = useState<[LineupCalculationResult, BasicStats] | null>(null);
 
@@ -63,13 +63,9 @@ const NewLineupPage: React.FC = () => {
 
 	const [isToolMenuOpen, setIsToolMenuOpen] = useState(false);
 
-	const addTool = (option: { name: string, Component: React.ComponentType<any>, props?: any }) => {
-		setActiveTools(prev => [...prev, { id: Date.now().toString(), name: option.name, Component: option.Component, props: option.props }]);
+	const addTool = (option: { type: string, name: string, Component: React.ComponentType<any>, props?: any }) => {
+		setActiveTools(prev => [...prev, { type: option.type, name: option.name, Component: option.Component, props: option.props }]);
 		setIsToolMenuOpen(false);
-	};
-
-	const onRemoveTool = (id: string) => {
-		setActiveTools(prev => prev.filter(t => t.id !== id));
 	};
 
 	const execute = useCallback(() => {
@@ -203,7 +199,7 @@ const NewLineupPage: React.FC = () => {
 			lineupOrder={lineupOrder} setLineupOrder={setLineupOrder}
 			lineupRunnerStats={lineupRunnerStats} setLineupRunnerStats={setLineupRunnerStats}
 			activeTools={activeTools}
-			onRemoveTool={onRemoveTool}
+			setActiveTools={setActiveTools}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen} setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool} toolOptions={TOOL_OPTIONS}
@@ -214,12 +210,12 @@ const NewLineupPage: React.FC = () => {
 			lineupName={lineupName}
 			selectedYear={selectedYear}
 			activeTools={activeTools}
+			setActiveTools={setActiveTools}
 			vizData={vizData}
 			isToolMenuOpen={isToolMenuOpen}
 			setIsToolMenuOpen={setIsToolMenuOpen}
 			addTool={addTool}
 			toolOptions={TOOL_OPTIONS}
-			onRemoveTool={onRemoveTool}
 		/>
 	);
 };

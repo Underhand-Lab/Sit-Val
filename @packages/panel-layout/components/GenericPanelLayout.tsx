@@ -1,18 +1,34 @@
-import React, { useEffect } from 'react';
-import { Panel, Group } from 'react-resizable-panels';
+import React, { forwardRef } from 'react';
+import { Panel, Group, Layout } from 'react-resizable-panels';
 import { Div, vars } from "@shared/bridges/UIBridge";
-import { usePanelLayoutState } from '../hooks/usePanelLayoutState';
-import { PanelGroup } from './PanelGroup';
+import { 
+  useGenericPanelLayout, 
+  GenericPanelLayoutHandle, 
+  LayoutItem,
+  PanelLayout,
+  SerializedPanelLayout 
+} from '../hooks/useGenericPanelLayout';
 import { ResizeHandle } from './ResizeHandle';
+import { GenericPanelRowContent } from './GenericPanelRowContent';
+export type { 
+  GenericPanelLayoutHandle, 
+  LayoutItem, 
+  PanelLayout, 
+  SerializedPanelLayout 
+};
 
-interface GenericPanelLayoutProps<T extends { id: string }> {
+export interface GenericPanelLayoutProps<T> {
   items: T[];
   renderItem: (
     item: T,
+    id: string, // 내부에서 발급한 ID를 외부로 전달
     handlers: { onDragStart: () => void; onDragEnd: () => void }
   ) => React.ReactNode;
-  renderTabLabel?: (item: T, isActive: boolean) => React.ReactNode;
-  onRemoveItem: (id: string) => void;
+  renderTabLabel?: (item: T, isActive: boolean, id: string) => React.ReactNode;
+  onItemInit?: (item: T, id: string) => void;
+  onItemCleanup?: (item: T, id: string) => void;
+  getItemDeps?: (item: T, id: string) => any[];
+  onRemoveItem?: (item: T, id: string) => void;
   onReorderItems?: (newItems: T[]) => void;
   onAddItem?: () => Promise<T | undefined>;
   emptyPlaceholder?: React.ReactNode;
@@ -22,96 +38,81 @@ interface GenericPanelLayoutProps<T extends { id: string }> {
   };
   maxColumns?: number;
   maxRows?: number;
-  /** 주입할 레이아웃 데이터 (JSON) */
-  layout?: any;
-  /** 레이아웃이나 패널 상태가 변경될 때 호출되는 콜백 (JSON 반환) */
-  onLayoutChange?: (layoutJson: any) => void;
+  layout?: SerializedPanelLayout;
+  onLayoutChange?: (layoutJson: PanelLayout<T>) => void;
+  onLayoutChangeEnd?: (layoutJson: PanelLayout<T>) => void;
 }
 
-export function GenericPanelLayout<T extends { id: string }>({
-  items,
-  renderItem,
-  onRemoveItem,
-  onReorderItems,
-  onAddItem,
-  emptyPlaceholder,
-  renderTabLabel,
-  maxColumns,
-  maxRows,
-  layout,
-  onLayoutChange,
-}: GenericPanelLayoutProps<T>) {
+/**
+ * GenericPanelLayout은 도메인 데이터 T를 내부 관리용 ID와 함께 래핑하여 레이아웃을 구성합니다.
+ */
+function GenericPanelLayoutComponent<T>(
+  props: GenericPanelLayoutProps<T>, 
+  ref: React.ForwardedRef<GenericPanelLayoutHandle<T>>
+) {
+  const layoutResult = useGenericPanelLayout(props, ref);
+
   const {
     groups,
-    itemsMap,
-    activeTabMap,
-    setActiveTabMap,
-    dragOverPos,
-    dropZone,
-    pendingAddTargetRef,
-    pendingInsertTargetRef,
-    lastInteractedItemId,
-    onPanelDragOver,
-    onPanelDrop,
-    onPanelDragLeave,
-    handleDragEnd,
-    setDraggedPos
-  } = usePanelLayoutState(items, onReorderItems, maxColumns, maxRows, layout);
-
-  // 레이아웃 정보(구조, 활성 탭 등)를 객체 형태로 추출하여 콜백 실행
-  useEffect(() => {
-    if (onLayoutChange) {
-      // id 대신 실제 아이템(T) 객체를 tabs 배열에 담아 반환
-      const layoutWithItems = {
-        groups: groups.map(col => col.map(row => ({
-          ...row,
-          tabs: row.tabs.map(id => itemsMap[id]).filter(Boolean)
-        }))),
-        activeTabMap
-      };
-      
-      onLayoutChange(layoutWithItems);
-    }
-  }, [groups, activeTabMap, itemsMap, onLayoutChange]);
-
+    colSizes,
+    setColSizes,
+    rowSizesMap,
+    isColChanged,
+    lastStructureRef,
+    handleResizeEnd,
+    setRowSizesMap,
+  } = layoutResult;
 
   return (
     <Div className="generic-panel-container" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden', position: 'relative', backgroundColor: vars.background, boxSizing: 'border-box' }}>
-      <Group orientation="horizontal" style={{ flex: 1 }}>
+      <Group 
+        orientation="horizontal" 
+        key={`h-group-${groups.length}`}
+        style={{ flex: 1 }} 
+        onLayoutChange={setColSizes}
+      >
         {groups.flatMap((column, cIdx) => {
+          const isRowChanged = column.length !== (lastStructureRef.current.rowCounts[cIdx] || 0);
+          const colDefaultSize = 100 / groups.length;
+          const savedColSize = colSizes[`col-${cIdx}`];
           const colElements: React.ReactNode[] = [
-            <Panel key={`col-${cIdx}`} id={`col-${cIdx}`} defaultSize={100 / groups.length} minSize={20}>
-              <Group orientation="vertical">
+            <Panel 
+              key={`col-${cIdx}`} 
+              id={`col-${cIdx}`} 
+              defaultSize={isColChanged && !savedColSize ? colDefaultSize : (savedColSize ?? colDefaultSize)} 
+              minSize={20}
+            >
+              <Group 
+                key={`v-group-${cIdx}-${column.length}`}
+                orientation="vertical" 
+                onLayoutChange={(sizes: Layout) => setRowSizesMap(prev => ({ ...prev, [cIdx]: sizes }))}
+              >
                 {column.flatMap((row, rIdx) => {
+                  const savedRowSize = rowSizesMap[cIdx]?.[row.id];
+                  const pendingSize = rowSizesMap[cIdx]?.['pending-split-size'];
                   const rowElements: React.ReactNode[] = [
-                    <Panel key={row.id} id={row.id} defaultSize={100 / column.length} minSize={15}>
-                      <PanelGroup
-                        cIdx={cIdx} rIdx={rIdx} group={row.tabs} itemsMap={itemsMap}
-                        activeTabId={activeTabMap[row.id]}
-                        onSelectTab={(id) => setActiveTabMap(prev => ({ ...prev, [row.id]: id }))}
-                        onRemoveItem={onRemoveItem}
-                        renderTabLabel={renderTabLabel}
-                        onAddItem={onAddItem ? async () => {
-                          const targetId = activeTabMap[row.id];
-                          pendingAddTargetRef.current = targetId;
-                          pendingInsertTargetRef.current = { targetRowId: row.id, targetTabId: targetId };
-                          const newItem = await onAddItem();
-                          if (newItem) {
-                            lastInteractedItemId.current = newItem.id;
-                          }
-                        } : undefined}
-                        renderItem={renderItem}
-                        dragOverPos={dragOverPos} dropZone={dropZone}
-                        onPanelDragOver={onPanelDragOver} onPanelDrop={onPanelDrop}
-                        onPanelDragLeave={onPanelDragLeave}
-                        onTabDragStart={(iIdx) => setDraggedPos({ cIdx, rIdx, iIdx })}
-                        onDragEnd={handleDragEnd}
+                    <Panel 
+                      key={row.id} 
+                      id={row.id} 
+                      defaultSize={isRowChanged && !savedRowSize ? (pendingSize ?? (100 / column.length)) : (savedRowSize ?? (100 / column.length))} 
+                      minSize={15}
+                    >
+                      <GenericPanelRowContent
+                        cIdx={cIdx}
+                        rIdx={rIdx}
+                        row={row}
+                        layout={layoutResult}
+                        externalProps={props}
                       />
                     </Panel>
                   ];
                   if (rIdx < column.length - 1) {
                     rowElements.push(
-                      <ResizeHandle key={`sep-row-${row.id}`} direction="horizontal" />
+                      <ResizeHandle 
+                        key={`sep-row-${row.id}`} 
+                        direction="horizontal" 
+                        onDraggingChange={(isDragging) => !isDragging && handleResizeEnd()}
+                      />
                     );
                   }
                   return rowElements;
@@ -121,7 +122,11 @@ export function GenericPanelLayout<T extends { id: string }>({
           ];
           if (cIdx < groups.length - 1) {
             colElements.push(
-              <ResizeHandle key={`sep-col-${cIdx}`} direction="vertical" />
+              <ResizeHandle 
+                key={`sep-col-${cIdx}`} 
+                direction="vertical" 
+                onDraggingChange={(isDragging) => !isDragging && handleResizeEnd()}
+              />
             );
           }
           return colElements;
@@ -130,3 +135,7 @@ export function GenericPanelLayout<T extends { id: string }>({
     </Div>
   );
 }
+
+export const GenericPanelLayout = forwardRef(GenericPanelLayoutComponent) as <T>(
+  props: GenericPanelLayoutProps<T> & { ref?: React.Ref<GenericPanelLayoutHandle<T>> }
+) => React.ReactElement;
