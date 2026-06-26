@@ -13,9 +13,10 @@ interface SearchableSelectProps {
   inputStyle?: any;
   searchResultsLabel?: string;
   searchOptions?: Option[];
+  allowCustomValue?: boolean;
 }
 
-const SearchableSelect: React.FC<SearchableSelectProps> = ({ value, sections, onChange, placeholder = 'Search...', renderOption, style, inputStyle, searchResultsLabel, searchOptions }) => {
+const SearchableSelect: React.FC<SearchableSelectProps> = ({ value, sections, onChange, placeholder = 'Search...', renderOption, style, inputStyle, searchResultsLabel, searchOptions, allowCustomValue = true }) => {
   const searchableSections = searchOptions ? [{ options: searchOptions }] : sections;
   const { isOpen, isEditable, searchTerm, setSearchTerm, hoveredValue, setHoveredValue, menuStyle, containerRef, menuRef, inputRef, mobileInputRef, filteredOptions, isInitialState, handleSelect, handleActivation } = useSearchableSelect({ value, sections: searchableSections, onChange, placeholder });
   const [isMobile, setIsMobile] = useState(false);
@@ -31,7 +32,8 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({ value, sections, on
     onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === 'Enter' && searchTerm) {
         const matched = searchableSections.flatMap((s) => s.options).find((o) => o?.label?.toLowerCase() === searchTerm.toLowerCase());
-        handleSelect(matched ? matched.value : searchTerm);
+        if (matched) handleSelect(matched.value);
+        else if (allowCustomValue) handleSelect(searchTerm);
       }
     },
   };
@@ -61,7 +63,7 @@ const SearchableSelect: React.FC<SearchableSelectProps> = ({ value, sections, on
             ))}
             {!isInitialState && <>
               {searchResultsLabel && <Div style={{ fontSize: '10px', padding: '4px 12px', opacity: 0.5, fontWeight: 'bold', color: vars.text, textAlign: 'left' }}>{searchResultsLabel.toUpperCase()}</Div>}
-              {searchTerm && !filteredOptions.length && <Div onClick={() => handleSelect(searchTerm)} onMouseEnter={() => setHoveredValue(searchTerm)} onMouseLeave={() => setHoveredValue(null)} style={optionStyle(value === searchTerm, hoveredValue === searchTerm)}>"{searchTerm}" Use</Div>}
+              {allowCustomValue && searchTerm && !filteredOptions.length && <Div onClick={() => handleSelect(searchTerm)} onMouseEnter={() => setHoveredValue(searchTerm)} onMouseLeave={() => setHoveredValue(null)} style={optionStyle(value === searchTerm, hoveredValue === searchTerm)}>"{searchTerm}" Use</Div>}
               {filteredOptions.map((opt: Option) => <Div key={opt.value} onClick={() => handleSelect(opt.value)} onMouseEnter={() => setHoveredValue(opt.value)} onMouseLeave={() => setHoveredValue(null)} style={optionStyle(value === opt.value, hoveredValue === opt.value)}>{renderOption ? renderOption(opt, value === opt.value, hoveredValue === opt.value) : opt.label}</Div>)}
             </>}
           </Div>

@@ -2,25 +2,24 @@
 
 ## Goal
 
-* 리그 목록 페이지가 홈과 다르게 빈 상태로 보이는 원인을 확인하고 현재 데이터 구조와 맞게 수정한다.
+* `Modal.tsx`에서 발생하는 `t is not defined` 런타임 오류를 제거한다.
 
 ## Plan
 
-* [x] 홈과 리그 목록 페이지의 조회 경로를 비교해 불일치 원인을 확인한다.
-* [x] 현재 DB 식별자 구조에 맞게 리그 목록 조회 키를 수정한다.
+* [x] `Modal.tsx`의 오류 지점을 확인한다.
+* [x] 현재 프로젝트 구조에 맞는 최소 수정으로 잘못된 참조를 제거한다.
 * [x] 빌드 1회로 결과를 검증하고 `working.md`에 반영한다.
 
 ## Progress
 
-* 홈은 `getRecentYearlyLeagues()`로 전체 `league_seasons`에서 최근 항목을 읽는다.
-* 리그 목록 페이지는 `getYearlyLeagues('kbo')`와 `yearlyLeagues_kbo` 캐시를 사용하고 있었다.
-* 현재 seed와 저장 구조에서 `league_seasons.league_id`는 `'league-kbo'` 형식이라 `'kbo'` 필터는 항상 비게 된다.
-* 리그 목록 페이지의 조회 키와 캐시 키를 실제 저장 식별자 `'league-kbo'`로 맞췄다.
+* `Modal.tsx`의 닫기 버튼이 `t("common.close")`를 호출하지만 `t` import나 정의가 없다.
+* 현재 코드 검색 기준으로 `t(` 사용처는 `Modal.tsx` 한 곳뿐이라, 전체 i18n 연결 문제라기보다 단일 잘못된 참조에 가깝다.
+* `Modal.tsx`의 닫기 버튼 문구를 직접 문자열로 바꿔 런타임 `ReferenceError`를 제거했다.
 * `npm run build` 1회 실행 결과 성공했다.
 
 ## Decisions
 
-* 이번 수정은 리그 목록 조회 키 불일치만 바로잡고, 목록 구조 자체는 바꾸지 않는다.
+* 이번 수정은 런타임 오류 제거가 목적이므로, `Modal.tsx` 버튼 문구는 직접 문자열로 처리한다.
 
 ## Pending
 
@@ -70,3 +69,5 @@
 * 2026-06-26: Synced LeaguePage tool initialization and runner stats persistence with current page architecture
 * 2026-06-26: Removed legacy BottomSheet editing from league personal visualizer and wired it to panel-based editing
 * 2026-06-26: Fixed LeagueSearchPage using outdated league code instead of current league id
+* 2026-06-26: Applied fixed-choice SearchableSelect to player league linking and lineup player selection flows
+* 2026-06-26: Fixed Modal runtime error caused by undefined translation helper

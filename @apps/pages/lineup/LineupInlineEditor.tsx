@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Div, InputNumber, Select, vars } from '@shared/bridges/UIBridge';
+import { Button, Div, InputNumber, SearchableSelect, vars } from '@shared/bridges/UIBridge';
 import RunnerInput from '@sit-val/components/RunnerInput';
 import BatterInput from '@sit-val/components/BatterInput';
 import { db } from '../../services/db';
@@ -8,7 +8,6 @@ import { LineupPlayerDisplay } from '../hooks/useLineupPageModel';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { ExtendedBatterStats, Player, YearlyPlayer } from '@packages/sit-val/types/Database';
-import * as Hangul from 'hangul-js';
 
 interface LineupInlineEditorProps {
   section?: 'lineup' | 'player' | 'runner';
@@ -47,7 +46,6 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
 }) => {
   const [editingYearlyPlayerId, setEditingYearlyPlayerId] = useState<string | null>(null);
   const [editingPlayerStats, setEditingPlayerStats] = useState<BatterStatsData | null>(null);
-  const [playerSearchTerm, setPlayerSearchTerm] = useState('');
   const [activeSlotIndex, setActiveSlotIndex] = useState<number | null>(null);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [allSearchablePlayers, setAllSearchablePlayers] = useState<LineupPlayerDisplay[]>([]);
@@ -127,16 +125,19 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
     syncEditedPlayerStats(editingYearlyPlayerId, nextStats);
   }, [editingYearlyPlayerId, syncEditedPlayerStats]);
 
-  const filteredSearchPlayers = useMemo(() => {
-    const term = playerSearchTerm.trim();
-    if (!term) return allSearchablePlayers.slice(0, 50);
-    const lowerTerm = term.toLowerCase();
-    return allSearchablePlayers.filter((player) =>
-      (player.name && Hangul.search(player.name, term) >= 0) ||
-      (player.year && player.year.toString().includes(lowerTerm)) ||
-      (player.id && player.id.toLowerCase().includes(lowerTerm))
-    ).slice(0, 100);
-  }, [allSearchablePlayers, playerSearchTerm]);
+  const searchablePlayerOptions = useMemo(() =>
+    allSearchablePlayers.map((player) => ({
+      label: `${player.year} ${player.name}`,
+      value: player.id,
+    }))
+  , [allSearchablePlayers]);
+
+  const lineupPlayerOptions = useMemo(() =>
+    lineupPlayersForEdit.map((player, index) => ({
+      label: `${index + 1}번 ${player.name} (${player.year})`,
+      value: player.id,
+    }))
+  , [lineupPlayersForEdit]);
 
   const handleSelectPlayer = (selectedPlayer: LineupPlayerDisplay) => {
     if (activeSlotIndex === null) return;
@@ -150,11 +151,18 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
     nextOrder[activeSlotIndex] = selectedPlayer.id;
     setLineupOrder(nextOrder);
     setCurrentLineupPlayers((prev) => prev.map((player, index) => index === activeSlotIndex ? selectedPlayer : player));
+    setActiveSlotIndex(null);
   };
+
+  const handleSelectSearchablePlayerId = useCallback((yearlyPlayerId: string) => {
+    const selectedPlayer = allSearchablePlayers.find((player) => player.id === yearlyPlayerId);
+    if (!selectedPlayer) return;
+    handleSelectPlayer(selectedPlayer);
+  }, [allSearchablePlayers, handleSelectPlayer]);
 
   const handleCreateAndSelectNewPlayer = async () => {
     if (activeSlotIndex === null) return;
-    const nameToUse = newPlayerName || playerSearchTerm || `새 선수 ${Date.now()}`;
+    const nameToUse = newPlayerName.trim() || `새 선수 ${Date.now()}`;
     const newPlayerId = `new-player-${Date.now()}`;
     await db.addPlayer({ id: newPlayerId, name: nameToUse } as Player);
     const user = await db.getCurrentUser();
@@ -237,7 +245,6 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
                     <Div style={{ display: 'flex', gap: '8px', marginLeft: '10px' }}>
                       <Button onClick={() => {
                         setActiveSlotIndex(isEditingSlot ? null : idx);
-                        setPlayerSearchTerm('');
                         setNewPlayerName('');
                       }}>
                         {isEditingSlot ? '선택 닫기' : '선수 추가'}
@@ -247,36 +254,32 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
 
                   {isEditingSlot ? (
                     <Div style={{ border: `1px solid ${vars.surface}`, borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <input
-                        placeholder="선수 이름 검색..."
-                        value={playerSearchTerm}
-                        onChange={(e) => setPlayerSearchTerm(e.target.value)}
-                        style={{ width: '100%', padding: '12px', border: '1px solid #ddd', borderRadius: '8px', boxSizing: 'border-box' }}
-                      />
-                      <Div style={{ maxHeight: '220px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                        <Button onClick={handleCreateAndSelectNewPlayer}>임시 선수 추가</Button>
-                        {filteredSearchPlayers.map((searchPlayer) => (
-                          <ListItemCard key={searchPlayer.id} onClick={() => handleSelectPlayer(searchPlayer)} style={{ marginBottom: '4px' }}>
-                            <Div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                              <Div style={{ backgroundColor: vars.surface, padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', color: vars.primary }}>
-                                {searchPlayer.year}
+                      <SearchableSelect
+                        value={currentLineupPlayers[idx]?.id || ''}
+                        onChange={handleSelectSearchablePlayerId}
+                        sections={[{ label: '선수 목록', options: searchablePlayerOptions }]}
+                        searchOptions={searchablePlayerOptions}
+                        searchResultsLabel="검색 결과"
+                        placeholder="선수 이름 또는 연도 검색..."
+                        allowCustomValue={false}
+                        renderOption={(option) => {
+                          const searchPlayer = allSearchablePlayers.find((player) => player.id === option.value);
+                          if (!searchPlayer) return option.label;
+                          return (
+                            <Div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                              <Div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Div style={{ backgroundColor: vars.surface, padding: '4px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', color: vars.primary }}>
+                                  {searchPlayer.year}
+                                </Div>
+                                <span style={{ fontSize: '16px', fontWeight: 600, color: vars.text }}>{searchPlayer.name}</span>
                               </Div>
-                              <span style={{ fontSize: '16px', fontWeight: 600, color: vars.text }}>{searchPlayer.name}</span>
+                              <span style={{ fontSize: '11px', color: vars.text, opacity: 0.4 }}>{searchPlayer.id.split('-')[0]}...</span>
                             </Div>
-                            <span style={{ fontSize: '11px', color: vars.text, opacity: 0.4 }}>{searchPlayer.id.split('-')[0]}...</span>
-                          </ListItemCard>
-                        ))}
-                        {playerSearchTerm.trim() !== '' && filteredSearchPlayers.length === 0 ? (
-                          <Div style={{ padding: '16px', backgroundColor: '#fffbe6', border: '1px solid #ffe58f', borderRadius: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            <p style={{ margin: 0, fontSize: '14px', color: '#856404' }}>'{playerSearchTerm}' 선수를 찾을 수 없습니다.</p>
-                            <input
-                              value={newPlayerName || playerSearchTerm}
-                              onChange={(e) => setNewPlayerName(e.target.value)}
-                              style={{ padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-                            />
-                            <Button onClick={handleCreateAndSelectNewPlayer}>새 선수 생성 및 선택</Button>
-                          </Div>
-                        ) : null}
+                          );
+                        }}
+                      />
+                      <Div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <Button onClick={handleCreateAndSelectNewPlayer}>임시 선수 추가</Button>
                       </Div>
                     </Div>
                   ) : null}
@@ -295,13 +298,14 @@ export const LineupInlineEditor: React.FC<LineupInlineEditorProps> = ({
             <p>라인업에 선수를 먼저 추가해주세요.</p>
           ) : (
             <>
-              <Select
+              <SearchableSelect
                 value={selectedPlayerId}
-                onChange={(e) => handleChoosePlayerForEdit(e.target.value)}
-                options={lineupPlayersForEdit.map((player, index) => ({
-                  label: `${index + 1}번 ${player.name} (${player.year})`,
-                  value: player.id,
-                }))}
+                onChange={handleChoosePlayerForEdit}
+                sections={[{ label: '라인업 선수', options: lineupPlayerOptions }]}
+                searchOptions={lineupPlayerOptions}
+                searchResultsLabel="검색 결과"
+                placeholder="편집할 선수 검색..."
+                allowCustomValue={false}
               />
               {editingPlayerStats ? (
                 <>

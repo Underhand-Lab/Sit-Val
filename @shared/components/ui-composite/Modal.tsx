@@ -43,7 +43,7 @@ const Modal: React.FC<ModalProps> = ({
           <H1>{title}</H1>
         </Div>
         <Div style={{ paddingBottom: "15px" }}>{children}</Div>
-        <Button onClick={onClose}>{t("common.close")}</Button>
+        <Button onClick={onClose}>닫기</Button>
       </Box>
     </Div>,
     rootBody,

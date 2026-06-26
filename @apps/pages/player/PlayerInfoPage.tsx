@@ -1,5 +1,5 @@
 import { YearlyLeague, YearlyPlayer } from '@packages/sit-val/types/Database';
-import { Button, Div, InputNumber, Select } from '@shared/bridges/UIBridge';
+import { Button, Div, InputNumber, SearchableSelect } from '@shared/bridges/UIBridge';
 import BatterInput from '@sit-val/components/BatterInput';
 import { BatterStats } from '@sit-val/types/BatterStats';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,7 +40,6 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
   handleSave, isMetaValid, startInEditMode = false,
 }) => {
   const navigate = useNavigate();
-  const [leagueSearch, setLeagueSearch] = useState('');
   const [yearlyLeagues, setYearlyLeagues] = useState<YearlyLeague[]>([]);
 
   const handleEditorSave = useCallback(async () => {
@@ -62,6 +61,14 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
     batterStats: new BatterStats(currentBatterStats || playerInfo?.stats || INITIAL_BATTER_STATS)
   }), [currentBatterStats, playerInfo]);
 
+  const leagueOptions = useMemo(() => [
+    { label: '선택 안함', value: '' },
+    ...yearlyLeagues.map((league: any) => ({
+      label: `${league.year} ${league.leagueId}`,
+      value: league.id,
+    }))
+  ], [yearlyLeagues]);
+
   const editorToolOptions = useMemo(() => {
     const PlayerMetaEditor: React.FC = () => (
       <Div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -77,24 +84,14 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
         </Div>
         <Div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <label>연동 리그 설정</label>
-          <InputNumber
-            type="text"
-            placeholder="리그 검색 (연도 또는 이름)..."
-            value={leagueSearch}
-            onChange={(e) => setLeagueSearch(e.target.value)}
-          />
-          <Select
+          <SearchableSelect
             value={yearlyLeagueId || ''}
-            onChange={(e) => setYearlyLeagueId(e.target.value)}
-            options={[
-              { label: '선택 안함', value: '' },
-              ...yearlyLeagues
-                .filter((league: any) =>
-                  (league.leagueId || '').toLowerCase().includes(leagueSearch.toLowerCase()) ||
-                  (league.year || '').toString().includes(leagueSearch)
-                )
-                .map((league: any) => ({ label: `${league.year} ${league.leagueId}`, value: league.id }))
-            ]}
+            onChange={setYearlyLeagueId}
+            sections={[{ label: '리그 목록', options: leagueOptions }]}
+            searchOptions={leagueOptions}
+            searchResultsLabel="검색 결과"
+            placeholder="리그 검색 (연도 또는 이름)..."
+            allowCustomValue={false}
           />
         </Div>
         <Div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -116,7 +113,7 @@ const PlayerInfoPage: React.FC<PlayerInfoPageProps> = ({
       { type: 'player-meta-editor', name: '기본 정보 편집', Component: PlayerMetaEditor },
       { type: 'player-batter-editor', name: '타격 능력 편집', Component: PlayerBatterEditor },
     ];
-  }, [currentBatterStats, handleEditorSave, isMetaValid, leagueSearch, playerName, selectedYear, setCurrentBatterStats, setPlayerName, setSelectedYear, setYearlyLeagueId, yearlyLeagueId, yearlyLeagues]);
+  }, [currentBatterStats, handleEditorSave, isMetaValid, leagueOptions, playerName, selectedYear, setCurrentBatterStats, setPlayerName, setSelectedYear, setYearlyLeagueId, yearlyLeagueId]);
 
   const allToolOptions = useMemo(
     () => [...toolOptions, ...editorToolOptions],
