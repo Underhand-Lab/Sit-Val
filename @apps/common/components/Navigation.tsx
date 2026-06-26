@@ -3,10 +3,12 @@ import { NavLink, Link } from 'react-router-dom';
 import { Div, vars } from '@shared/bridges/UIBridge'
 import { db } from '../../services/db';
 import { supabase } from '../../services/supabaseClient';
+import { openLoginModal } from '../../services/authModal';
 
 interface NavItemData {
     name: string;
     path: string;
+    action?: 'login';
 }
 
 const Navigation = () => {
@@ -28,7 +30,9 @@ const Navigation = () => {
         { name: '선수 분석', path: '/player' },
         { name: '리그 분석', path: '/league' },
         { name: '라인업 분석', path: '/lineup' },
-        { name: isLoggedIn ? '계정' : '로그인', path: isLoggedIn ? '/account' : '/login' },
+        isLoggedIn
+            ? { name: '계정', path: '/account' }
+            : { name: '로그인', path: '/', action: 'login' },
     ];
 
     return (
@@ -59,6 +63,12 @@ interface NavItemProps {
 const NavItem = ({ item }: NavItemProps) => {
     const [isHovered, setIsHovered] = useState(false);
 
+    const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+        if (item.action !== 'login') return;
+        event.preventDefault();
+        openLoginModal();
+    };
+
     return (
         <NavLink
             to={item.path}
@@ -69,6 +79,7 @@ const NavItem = ({ item }: NavItemProps) => {
             })}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
+            onClick={handleClick}
         >
             {item.name}
         </NavLink>

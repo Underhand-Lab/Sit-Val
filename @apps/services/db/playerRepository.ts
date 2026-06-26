@@ -216,6 +216,28 @@ export const playerRepository = {
       .filter(Boolean) as (YearlyPlayer & { name: string })[];
   },
 
+  async getMyYearlyPlayersWithNames(limit = 5) {
+    const user = await authRepository.getCurrentUser();
+    if (!user) return [];
+
+    const { data: playerSeasons, error } = await supabase
+      .from('player_seasons')
+      .select('*')
+      .eq('creator_id', user.id)
+      .order('year', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    const seasons = playerSeasons || [];
+    const [playerNames, teamIdsMap] = await Promise.all([
+      getPlayerNames(seasons.map((row) => row.player_id)),
+      getPlayerTeamIds(seasons.map((row) => row.id)),
+    ]);
+    return seasons
+      .map((row) => mapPlayerSeasonRow(row, playerNames.get(row.player_id), teamIdsMap.get(row.id) || []))
+      .filter(Boolean) as (YearlyPlayer & { name: string })[];
+  },
+
   async getTeamWithPlayers(teamId: string, year: number) {
     const { data: teamSeason } = await supabase.from('team_seasons').select('*').eq('team_id', teamId).eq('year', year).maybeSingle();
     if (!teamSeason) return { team: null, players: [] };

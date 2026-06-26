@@ -11,6 +11,7 @@ import { db } from '@apps/services/db';
 import { BasicStats } from '@apps/types/BasicStats';
 import { YearlyLeague } from '@apps/types/Database';
 import { PageToolOption } from '@apps/pages/types/pageTools';
+import { openLoginModal } from '@apps/services/authModal';
 
 const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 65, '2B': 23, '3B': 0, hr: 56, bb: 111, so: 89, go: 117, fo: 135, sf: 6, sh: 0, hbp: 0 };
 const INITIAL_RUNNER_STATS: RunnerStats = { passedball: 0.03, s_r1_r2_safe: 0.10, s_r1_r2_out: 0.03, s_r2_r3_safe: 0.004, s_r2_r3_out: 0.001, '1B_r2_home_safe': 0.40, '1B_r2_home_out': 0.05, '1B_r2_r3_safe': 0.55, '1B_r1_r3_safe': 0.30, '1B_r1_r3_out': 0.05, '1B_r1_r2_safe': 0.65, '2B_r1_home_safe': 0.7, '2B_r1_home_out': 0.05, '2B_r1_r3_safe': 0.25, fo_r3_home_safe: 0.85, fo_r3_home_out: 0.05, fo_r3_r3_safe: 0.10, go_r1_r2_out: 0.3, go_b_r1_out: 0.3 };
@@ -95,10 +96,10 @@ export function useLeaguePageModel(id: string | undefined, fromId: string | null
   const handleSave = useCallback(async () => {
     const user = await db.getCurrentUser();
     if (!user) {
-      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 모달을 여시겠습니까?')) {
         const pendingData: PendingLeagueEdit = { leagueIdInput, selectedYear, leagueBatterStats, leagueRunnerStats };
         localStorage.setItem('pending_league_edit', JSON.stringify(pendingData));
-        navigate('/login');
+        openLoginModal();
       }
       return null;
     }

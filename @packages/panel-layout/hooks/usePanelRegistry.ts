@@ -35,6 +35,7 @@ export function usePanelRegistry<T>(
   ) => {
     const item = getItemByInternalId(id);
     if (!item) return;
+    if ((item as any)?.props?.lockRemove) return;
 
     if (activeTabMap[rowId] === id && tabIds.length > 1) {
       const closedIdx = tabIds.indexOf(id);

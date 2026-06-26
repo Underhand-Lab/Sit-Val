@@ -60,6 +60,21 @@ export const leagueRepository = {
     return (data || []).map(mapLeagueSeasonRow).filter(Boolean) as YearlyLeague[];
   },
 
+  async getMyYearlyLeagues(limit = 5) {
+    const user = await authRepository.getCurrentUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('league_seasons')
+      .select('*')
+      .eq('creator_id', user.id)
+      .order('year', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return (data || []).map(mapLeagueSeasonRow).filter(Boolean) as YearlyLeague[];
+  },
+
   async getYearlyLeagueById(id: string) {
     const { data, error } = await supabase.from('league_seasons').select('*').eq('id', id).maybeSingle();
     if (error) throw error;

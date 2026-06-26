@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { calculateBasicStats } from '@apps/common/api/baseball';
 import { calculateBatterAbility } from '@apps/common/api/stats';
 import { calculateLineupRE, LineupCalculationResult } from '@apps/features/lineup/api/re-line-up';
+import { openLoginModal } from '@apps/services/authModal';
 import { db } from '@apps/services/db';
 import { BasicStats } from '@apps/types/BasicStats';
 import { useNavigate } from 'react-router-dom';
@@ -164,10 +165,10 @@ export function useLineupPageModel(id: string | undefined, fromId: string | null
   const handleSave = useCallback(async () => {
     const user = await db.getCurrentUser();
     if (!user) {
-      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 모달을 여시겠습니까?')) {
         const pendingData: PendingLineupEdit = { lineupOrder, lineupRunnerStats, lineupName, selectedYear };
         localStorage.setItem('pending_lineup_edit', JSON.stringify(pendingData));
-        navigate('/login');
+        openLoginModal();
       }
       return null;
     }

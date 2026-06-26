@@ -2,23 +2,25 @@
 
 ## Goal
 
-* 모달 내부 도구 선택 버튼의 폰트를 공용 버튼과 통일한다.
+* 계정 설정 패널은 VisualizerList 안에 유지하되 삭제되지 않도록 보호한다.
 
 ## Plan
 
-* [x] 모달 내부 도구 선택 항목의 현재 렌더링 방식을 확인한다.
-* [x] 도구 선택 항목을 공용 버튼 스타일과 동일한 방식으로 맞춘다.
+* [x] 계정 설정 패널이 삭제되는 진입점을 확인한다.
+* [x] 계정 설정 패널에 삭제 금지 플래그를 적용한다.
+* [x] VisualizerList 공용 패널 삭제 경로도 같은 플래그를 존중하도록 막는다.
 * [x] 빌드 1회로 결과를 검증하고 `working.md`에 반영한다.
 
 ## Progress
 
-* 모달 내부 도구 선택 항목은 공용 `Button`이 아니라 클릭 가능한 `Div`로 렌더링되어 폰트가 다르게 보임을 확인했다.
-* 도구 선택 항목을 공용 `Button`으로 교체해 폰트와 버튼 스타일을 통일했다.
+* 계정 설정 패널은 VisualizerList 내부 패널로 유지 중이다.
+* 공용 패널 그룹에서 `lockRemove` 플래그가 있는 항목은 삭제 버튼을 숨기고, 내부 제거 경로에서도 차단하도록 조정했다.
+* 계정 설정 패널 옵션에 `lockRemove: true`를 추가해 실수로 지워지지 않게 했다.
 * `npm run build` 1회 실행 결과 성공했다.
 
 ## Decisions
 
-* 폰트와 상호작용 스타일을 함께 맞추기 위해 도구 선택 항목을 공용 `Button`으로 교체한다.
+* 계정 설정은 VisualizerList 패널로 유지하되 삭제는 막는다.
 
 ## Pending
 
@@ -49,3 +51,18 @@
 * 2026-06-25: Converted ERD document to Mermaid for VS Code preview
 * 2026-06-25: Moved runner values into league/team seasons with explicit fallback design
 * 2026-06-26: Updated app DB compatibility layer for redesigned Supabase schema
+* 2026-06-26: Removed standalone login page route and kept modal-only login flow
+* 2026-06-26: Removed duplicated title and nested box from login modal
+* 2026-06-26: Added my analysis lists to account page with per-section limit
+* 2026-06-26: Reordered account page so my analysis sections appear before account settings
+* 2026-06-26: Split account page into analysis/settings subtabs
+* 2026-06-26: Restyled account subtabs and content panel to align with VisualizerList branding
+* 2026-06-26: Removed outer account page box so the page uses the full analysis-style width
+* 2026-06-26: Removed account page header so the tab panel occupies the page body directly
+* 2026-06-26: Matched account page flow to player analysis layout and expanded settings panel to full body height
+* 2026-06-26: Switched account analysis tab to VisualizerList + panel-add flow for my-analysis lists
+* 2026-06-26: Seeded default account analysis panel so VisualizerList add button is always accessible
+* 2026-06-26: Stabilized account analysis panel definitions to match other VisualizerList-based analysis pages
+* 2026-06-26: Unified the entire account page under VisualizerList panels including account settings
+* 2026-06-26: Stabilized account panel option references to prevent VisualizerList empty-layout warnings and update loops
+* 2026-06-26: Locked account settings panel removal while keeping it inside VisualizerList

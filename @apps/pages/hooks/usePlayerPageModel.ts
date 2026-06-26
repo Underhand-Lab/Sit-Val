@@ -9,6 +9,7 @@ import { db } from '@apps/services/db';
 import { YearlyLeague, YearlyPlayer } from '@apps/types/Database';
 import { PageToolOption } from '@apps/pages/types/pageTools';
 import { useNavigate } from 'react-router-dom';
+import { openLoginModal } from '@apps/services/authModal';
 
 export const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0 };
 const INITIAL_RUNNER_STATS: RunnerStats = {
@@ -125,10 +126,10 @@ export function usePlayerPageModel(id: string | undefined, fromId: string | null
   const handleSave = useCallback(async () => {
     const user = await db.getCurrentUser();
     if (!user) {
-      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 모달을 여시겠습니까?')) {
         const pendingData: PendingPlayerEdit = { playerName, selectedYear, currentBatterStats, yearlyLeagueId };
         localStorage.setItem('pending_player_edit', JSON.stringify(pendingData));
-        navigate('/login');
+        openLoginModal();
       }
       return;
     }

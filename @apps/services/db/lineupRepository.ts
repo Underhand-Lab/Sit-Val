@@ -190,6 +190,21 @@ export const lineupRepository = {
     return mapLineupRows(data || []);
   },
 
+  async getMyYearlyLineups(limit = 5) {
+    const user = await authRepository.getCurrentUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+      .from('lineups')
+      .select('*')
+      .eq('creator_id', user.id)
+      .order('year', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(limit);
+    if (error) throw error;
+    return mapLineupRows(data || []);
+  },
+
   async saveYearlyLineup(data: Omit<YearlyLineup, 'creatorId'>) {
     const user = await authRepository.getCurrentUser();
     if (!user) throw new Error('로그인이 필요합니다.');

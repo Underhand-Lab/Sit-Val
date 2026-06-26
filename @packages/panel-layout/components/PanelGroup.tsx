@@ -69,6 +69,7 @@ export function PanelGroup<T>({
             // itemsMap이 갱신되었지만 groups가 아직 정리되지 않은 타이밍에
             // item이 undefined인 경우 해당 탭을 렌더링하지 않아 깜빡임 방지
             if (!item) return null;
+            const isRemoveLocked = Boolean((item as any)?.props?.lockRemove);
             const isActive = activeTabId === id;
             return (
               <Div
@@ -94,10 +95,12 @@ export function PanelGroup<T>({
                   </span>
                 )}
                 <Div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onRemoveItem(id); }}
-                    style={{ background: 'none', border: 'none', color: vars.text, cursor: 'pointer', padding: '2px', fontSize: '10px', opacity: 0.6 }}
-                  >✕</button>
+                  {!isRemoveLocked && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onRemoveItem(id); }}
+                      style={{ background: 'none', border: 'none', color: vars.text, cursor: 'pointer', padding: '2px', fontSize: '10px', opacity: 0.6 }}
+                    >✕</button>
+                  )}
                 </Div>
               </Div>
             );
