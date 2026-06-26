@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
-import { Div, BottomSheet, vars } from '@shared/bridges/UIBridge';
+import { Button, Div, vars } from '@shared/bridges/UIBridge';
 import { GenericPanelLayout, SerializedPanelLayout, GenericPanelLayoutHandle, PanelLayout } from '@packages/panel-layout/components/GenericPanelLayout';
 import { useVisualizerAddSheet } from '../hooks/useVisualizerAddSheet';
 import { useVisualizerToolsAndLayout } from '../hooks/useVisualizerToolsAndLayout';
+import Modal from '@shared/components/Modal';
  
 interface VisualizerListProps {
   tools: Array<{ id?: string, type: string, name: string, Component: React.ComponentType<any>, props?: Record<string, any> }>;
@@ -101,7 +102,7 @@ export const VisualizerList: React.FC<VisualizerListProps> = memo(({
         </Div>
       );
     },
-    [data]
+    [commonItemProps, data]
   );
 
   const renderTabLabel = useCallback((tool: any, isActive: boolean, _id: string) => {
@@ -160,41 +161,40 @@ export const VisualizerList: React.FC<VisualizerListProps> = memo(({
       </Div>
 
       {toolOptions && (
-        <BottomSheet
+        <Modal
           isOpen={isAddSheetOpen}
           onClose={handleCloseSheet}
           title="분석 도구 추가"
         >
           <Div
             style={{
-              padding: '20px',
               display: 'flex',
               flexDirection: 'column',
               gap: '10px',
+              minWidth: '280px',
             }}
           >
             {toolOptions.map((option) => (
-              <Div
+              <Button
                 key={option.name}
                 onClick={() => handleSelectToolOption(option)}
                 style={{
                   padding: '15px 20px',
-                  cursor: 'pointer',
                   fontSize: '15px',
                   color: vars.text,
-                  backgroundColor: vars.box,
-                  border: '1px solid',
-                  borderColor: vars.surface,
+                  backgroundColor: vars.surface,
+                  boxShadow: 'none',
                   borderRadius: '6px',
                   textAlign: 'center',
-                  transition: 'background-color 0.2s',
+                  justifyContent: 'center',
+                  width: '100%',
                 }}
               >
                 {option.name}
-              </Div>
+              </Button>
             ))}
           </Div>
-        </BottomSheet>
+        </Modal>
       )}
     </>
   );

@@ -8,6 +8,7 @@ import { calculateRE } from '@apps/features/league/api/re-league';
 import { db } from '@apps/services/db';
 import { YearlyLeague, YearlyPlayer } from '@apps/types/Database';
 import { PageToolOption } from '@apps/pages/types/pageTools';
+import { useNavigate } from 'react-router-dom';
 
 export const INITIAL_BATTER_STATS: BatterStatsData = { '1B': 0, '2B': 0, '3B': 0, hr: 0, bb: 0, so: 0, go: 0, fo: 0, sf: 0, sh: 0, hbp: 0 };
 const INITIAL_RUNNER_STATS: RunnerStats = {
@@ -21,8 +22,15 @@ const INITIAL_RUNNER_STATS: RunnerStats = {
 
 export type PlayerVizData = [ReturnType<typeof calculateRE>, Calc.WOBAWeights, number, number, number] | null;
 type YearlyPlayerWithName = YearlyPlayer & { name?: string };
+interface PendingPlayerEdit {
+  playerName: string;
+  selectedYear: number;
+  currentBatterStats: BatterStatsData;
+  yearlyLeagueId: string;
+}
 
 export function usePlayerPageModel(id: string | undefined, fromId: string | null, initialTools: PageToolOption[]) {
+  const navigate = useNavigate();
   const transitionEngine = useMemo(() => new TransitionEngine.Standard(), []);
   const [playerYearlyStats, setPlayerYearlyStats] = useState<YearlyPlayer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -71,6 +79,16 @@ export function usePlayerPageModel(id: string | undefined, fromId: string | null
         setPlayerName('알 수 없음');
       }
 
+      const pending = localStorage.getItem('pending_player_edit');
+      if (pending) {
+        const pendingData = JSON.parse(pending) as PendingPlayerEdit;
+        setPlayerName(pendingData.playerName);
+        setSelectedYear(pendingData.selectedYear);
+        setCurrentBatterStats(pendingData.currentBatterStats);
+        setYearlyLeagueId(pendingData.yearlyLeagueId);
+        localStorage.removeItem('pending_player_edit');
+      }
+
       setIsEditMode(id === 'new');
       setIsLoading(false);
     };
@@ -104,6 +122,33 @@ export function usePlayerPageModel(id: string | undefined, fromId: string | null
     setIsToolMenuOpen(false);
   }, []);
 
+  const handleSave = useCallback(async () => {
+    const user = await db.getCurrentUser();
+    if (!user) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+        const pendingData: PendingPlayerEdit = { playerName, selectedYear, currentBatterStats, yearlyLeagueId };
+        localStorage.setItem('pending_player_edit', JSON.stringify(pendingData));
+        navigate('/login');
+      }
+      return;
+    }
+
+    const playerIdToUse = playerYearlyStats?.playerId || `player-${Date.now()}`;
+    const statsInstance = new BatterStats(currentBatterStats || INITIAL_BATTER_STATS);
+    const dataToSave = {
+      id: playerYearlyStats?.id || '',
+      playerId: playerIdToUse,
+      year: selectedYear,
+      stats: { ...(currentBatterStats || INITIAL_BATTER_STATS), pa: statsInstance.pa, r: 0, rbi: 0 } as any,
+      name: playerName || '',
+      yearlyLeagueId: yearlyLeagueId || null,
+      yearlyTeamIds: playerYearlyStats?.yearlyTeamIds || ([] as string[])
+    };
+
+    const result = await db.saveYearlyPlayer(dataToSave);
+    return result.id;
+  }, [currentBatterStats, navigate, playerName, playerYearlyStats, selectedYear, yearlyLeagueId]);
+
   return {
     playerYearlyStats,
     isLoading,
@@ -123,5 +168,7 @@ export function usePlayerPageModel(id: string | undefined, fromId: string | null
     setActiveTools,
     addTool,
     vizData,
+    handleSave,
+    isMetaValid: (playerName || '').trim() !== '' && !isNaN(selectedYear) && selectedYear > 0,
   };
 }

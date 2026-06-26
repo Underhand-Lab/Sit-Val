@@ -7,6 +7,7 @@ import { calculateBatterAbility } from '@apps/common/api/stats';
 import { calculateLineupRE, LineupCalculationResult } from '@apps/features/lineup/api/re-line-up';
 import { db } from '@apps/services/db';
 import { BasicStats } from '@apps/types/BasicStats';
+import { useNavigate } from 'react-router-dom';
 import { PageToolOption } from '@apps/pages/types/pageTools';
 
 export interface LineupPlayerDisplay extends YearlyPlayer {
@@ -44,6 +45,7 @@ function createPlaceholderPlayer(pageId: string | undefined, slot: number, year:
 }
 
 export function useLineupPageModel(id: string | undefined, fromId: string | null, initialTools: PageToolOption[]) {
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTools, setActiveTools] = useState<PageToolOption[]>(initialTools);
   const [availablePlayers, setAvailablePlayers] = useState<LineupPlayerDisplay[]>(db.getSyncCache<LineupPlayerDisplay[]>('allYearlyPlayersWithNames') || []);
@@ -159,6 +161,28 @@ export function useLineupPageModel(id: string | undefined, fromId: string | null
     setIsToolMenuOpen(false);
   }, []);
 
+  const handleSave = useCallback(async () => {
+    const user = await db.getCurrentUser();
+    if (!user) {
+      if (confirm('로그인이 필요한 기능입니다. 현재 내용을 임시 저장하고 로그인 페이지로 이동하시겠습니까?')) {
+        const pendingData: PendingLineupEdit = { lineupOrder, lineupRunnerStats, lineupName, selectedYear };
+        localStorage.setItem('pending_lineup_edit', JSON.stringify(pendingData));
+        navigate('/login');
+      }
+      return null;
+    }
+
+    const result = await db.saveYearlyLineup({
+      id: id !== 'new' ? id || '' : '',
+      name: lineupName,
+      year: selectedYear,
+      playerIds: lineupOrder,
+      runnerStats: lineupRunnerStats
+    });
+
+    return result.id;
+  }, [id, lineupName, lineupOrder, lineupRunnerStats, navigate, selectedYear]);
+
   return {
     isLoading,
     activeTools,
@@ -180,5 +204,7 @@ export function useLineupPageModel(id: string | undefined, fromId: string | null
     isToolMenuOpen,
     setIsToolMenuOpen,
     addTool,
+    handleSave,
+    isMetaValid: lineupName.trim() !== '' && !isNaN(selectedYear) && selectedYear > 0,
   };
 }

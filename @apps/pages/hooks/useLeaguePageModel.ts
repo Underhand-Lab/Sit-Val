@@ -100,17 +100,13 @@ export function useLeaguePageModel(id: string | undefined, fromId: string | null
         localStorage.setItem('pending_league_edit', JSON.stringify(pendingData));
         navigate('/login');
       }
-      return;
+      return null;
     }
 
     const actualId = id === 'new' ? (fromId || '') : id || '';
     const leagueData = { id: actualId, leagueId: leagueIdInput, year: selectedYear, stats: { ...leagueBatterStats, r: 0, rbi: 0 } };
-    try {
-      await db.saveYearlyLeague(leagueData);
-      setIsEditMode(false);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : '저장에 실패했습니다.');
-    }
+    const result = await db.saveYearlyLeague(leagueData);
+    return result.id;
   }, [fromId, id, leagueBatterStats, leagueIdInput, leagueRunnerStats, navigate, selectedYear]);
 
   return {

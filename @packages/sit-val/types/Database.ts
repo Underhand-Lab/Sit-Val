@@ -1,7 +1,6 @@
 import { BatterStatsData } from './BatterStats';
-import { RunnerStats } from './RunnerStats'; // RunnerStats import 추가
+import { RunnerStats } from './RunnerStats';
 
-// 타격 스탯에 득점(R)과 타점(RBI)을 추가한 확장 타입
 export interface ExtendedBatterStats extends BatterStatsData {
   r: number;
   rbi: number;
@@ -9,6 +8,7 @@ export interface ExtendedBatterStats extends BatterStatsData {
 
 export interface League {
   id: string;
+  code?: string;
   name: string;
 }
 
@@ -17,47 +17,53 @@ export interface YearlyLeague {
   leagueId: string;
   year: number;
   stats: ExtendedBatterStats;
-  creatorId: string; // 작성자 ID 추가
+  runnerStats?: RunnerStats;
+  creatorId: string;
 }
 
 export interface Team {
   id: string;
+  code?: string;
   name: string;
 }
 
 export interface YearlyTeam {
   id: string;
   teamId: string;
-  yearlyLeagueId: string; // 연도별 리그 외래키
+  yearlyLeagueId: string;
   year: number;
-  stats: ExtendedBatterStats;
-  creatorId: string; // 작성자 ID 추가
+  runnerStats?: RunnerStats | null;
+  defaultLineupId?: string | null;
+  creatorId: string;
 }
 
 export interface Player {
   id: string;
   name: string;
   position?: string;
+  bats?: string;
+  throws?: string;
 }
 
 export interface YearlyPlayer {
   id: string;
   playerId: string;
   name?: string;
-  yearlyTeamIds: string[]; // 이적 고려(여러 팀 가능)
+  yearlyTeamIds: string[];
   year: number;
-  yearlyLeagueId?: string; // 연동된 리그 ID
+  yearlyLeagueId?: string;
   stats: ExtendedBatterStats;
-  creatorId: string; // 작성자 ID 추가
+  creatorId: string;
 }
 
 export interface YearlyLineup {
   id: string;
   name: string;
   year: number;
-  playerIds: string[]; // YearlyPlayer IDs
+  playerIds: string[];
   runnerStats: RunnerStats;
   creatorId: string;
+  yearlyTeamId?: string;
 }
 
 export interface DBStore {
@@ -68,7 +74,7 @@ export interface DBStore {
   players: Player[];
   yearlyPlayers: YearlyPlayer[];
   yearlyLineups: YearlyLineup[];
-  lineupRunnerStats: RunnerStats; // 라인업 주자 스탯 추가
+  lineupRunnerStats: RunnerStats;
 }
 
 export type { RunnerStats };

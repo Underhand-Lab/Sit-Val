@@ -4,7 +4,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import PlayerBasicVisualizer from '../features/player/components/PlayerBasicVisualizer';
 import PlayerPersonalVisualizer from '../features/player/components/PlayerPersonalVisualizer';
 import { usePlayerPageModel } from './hooks/usePlayerPageModel';
-import PlayerEditPage from './player/PlayerEditPage';
 import PlayerInfoPage from './player/PlayerInfoPage';
 import PlayerSearchPage from './player/PlayerSearchPage';
 import { PageToolOption } from './types/pageTools';
@@ -23,29 +22,19 @@ const PlayerPage: React.FC = () => {
   if (model.isLoading) return <Div style={{ padding: '40px' }}>불러오는 중...</Div>;
   if (id !== 'new' && !model.playerYearlyStats) return <Div style={{ padding: '40px' }}>404 - 선수를 찾을 수 없습니다.</Div>;
 
-  return model.isEditMode ? (
-    <PlayerEditPage 
-      id={id}
-      playerYearlyStats={model.playerYearlyStats}
-      playerName={model.playerName} setPlayerName={model.setPlayerName}
-      selectedYear={model.selectedYear} setSelectedYear={model.setSelectedYear}
-      currentBatterStats={model.currentBatterStats} setCurrentBatterStats={model.setCurrentBatterStats}
-      yearlyLeagueId={model.yearlyLeagueId} setYearlyLeagueId={model.setYearlyLeagueId}
-      activeTools={model.activeTools}
-      setActiveTools={model.setActiveTools}
-      vizData={model.vizData}
-      isToolMenuOpen={model.isToolMenuOpen}
-      setIsToolMenuOpen={model.setIsToolMenuOpen}
-      addTool={model.addTool}
-      toolOptions={TOOL_OPTIONS}
-    />
-  ) : (
+  return (
     <PlayerInfoPage 
       id={id}
       playerName={model.playerName}
+      setPlayerName={model.setPlayerName}
       playerInfo={model.playerYearlyStats}
       selectedYear={model.selectedYear}
+      setSelectedYear={model.setSelectedYear}
       leagueData={model.leagueData}
+      currentBatterStats={model.currentBatterStats}
+      setCurrentBatterStats={model.setCurrentBatterStats}
+      yearlyLeagueId={model.yearlyLeagueId}
+      setYearlyLeagueId={model.setYearlyLeagueId}
       activeTools={model.activeTools}
       setActiveTools={model.setActiveTools}
       vizData={model.vizData}
@@ -53,6 +42,9 @@ const PlayerPage: React.FC = () => {
       setIsToolMenuOpen={model.setIsToolMenuOpen}
       addTool={model.addTool}
       toolOptions={TOOL_OPTIONS}
+      handleSave={model.handleSave}
+      isMetaValid={model.isMetaValid}
+      startInEditMode={model.isEditMode}
     />
   );
 };

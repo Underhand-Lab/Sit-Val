@@ -48,3 +48,14 @@ export const flattenRunnerStats = <T extends { runnerStats?: Record<string, unkn
   const { runnerStats, ...rest } = data;
   return { ...rest, ...(runnerStats || {}) };
 };
+
+export const pickRunnerStats = <T extends Record<string, any> | null>(row: T) => {
+  if (!row) return null;
+  const runnerStats: Record<string, unknown> = {};
+  RUNNER_STATS_KEYS.forEach((key) => {
+    if (key in row) {
+      runnerStats[key] = row[key];
+    }
+  });
+  return runnerStats;
+};
