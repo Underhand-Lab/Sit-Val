@@ -24,11 +24,7 @@ const TOOL_OPTIONS: PageToolOption[] = [
 function LeaguePage() {
 	const { id } = useParams();
 	const [searchParams] = useSearchParams();
-	const model = useLeaguePageModel(id, searchParams.get('from'), [
-		{ type: 'league-info', name: '리그 정보', Component: LeagueVisualizer },
-		{ type: 'league-run-value', name: '타구 가치', Component: RunValueVisualizer },
-		{ type: 'league-personal', name: '개인 가치', Component: PersonalVisualizer }
-	]);
+	const model = useLeaguePageModel(id, searchParams.get('from'), TOOL_OPTIONS);
 
 	if (!id) return <LeagueSearchPage />;
 	if (model.isLoading) return <Div style={{ padding: '40px' }}>데이터를 불러오는 중...</Div>;

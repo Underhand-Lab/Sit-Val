@@ -15,7 +15,7 @@ export const lightTheme: ThemeVars = {
     surface: '#f8f8f8',
     box: '#f0f0f0',
     text: '#1c244a',
-    font: "'KBO-Dia-Gothic_medium', Arial, sans-serif",
+    font: "'Giants', Arial, sans-serif",
 };
 
 export const darkTheme: ThemeVars = {
@@ -25,13 +25,20 @@ export const darkTheme: ThemeVars = {
     surface: '#313131',
     box: '#212121',
     text: '#ddd',
-    font: "'KBO-Dia-Gothic_medium', Arial, sans-serif",
+    font: "'Giants', Arial, sans-serif",
 };
 
+const FONT_STORAGE_KEY = 'cvval_font_preference';
+const THEME_STORAGE_KEY = 'cvval_theme_preference';
+
 /**
- * 시스템(OS) 설정에 따른 테마 모드를 반환합니다.
+ * 저장된 설정 또는 시스템 설정에 따른 테마 모드를 반환합니다.
  */
 export const getSystemTheme = (): 'light' | 'dark' => {
+    if (typeof window !== 'undefined') {
+        const savedTheme = readString(THEME_STORAGE_KEY);
+        if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
+    }
     if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
         return 'dark';
     }
@@ -45,12 +52,32 @@ export const getSystemTheme = (): 'light' | 'dark' => {
 const initialMode = getSystemTheme();
 export const vars: ThemeVars = { ...(initialMode === 'dark' ? darkTheme : lightTheme) };
 
+// 초기화 시 로컬 스토리지에서 저장된 글꼴 로드
+if (typeof window !== 'undefined') {
+    const savedFont = readString(FONT_STORAGE_KEY);
+    if (savedFont) vars.font = savedFont;
+}
+
 /**
  * 테마 모드를 변경하는 함수입니다.
  */
 export const setThemeMode = (mode: 'light' | 'dark') => {
     const target = mode === 'light' ? lightTheme : darkTheme;
     Object.assign(vars, target);
+
+    // 테마 변경 시 기본 글꼴로 덮어씌워지는 것을 방지하기 위해 저장된 글꼴 재적용
+    const savedFont = readString(FONT_STORAGE_KEY);
+    if (savedFont) vars.font = savedFont;
+
+    if (typeof window !== 'undefined') {
+        writeString(THEME_STORAGE_KEY, mode);
+    }
+};
+
+export const setGlobalFont = (font: string) => {
+    vars.font = font;
+    writeString(FONT_STORAGE_KEY, font);
 };
 
 export default vars;
+import { readString, writeString } from '@shared/runtime/storage';

@@ -11,7 +11,7 @@ import { db } from '../../services/db';
 
 const LeagueSearchPage: React.FC = () => {
 	const navigate = useNavigate();
-	const [leagues, setLeagues] = useState<YearlyLeague[]>(db.getSyncCache('yearlyLeagues_kbo') || []);
+	const [leagues, setLeagues] = useState<YearlyLeague[]>(db.getSyncCache('yearlyLeagues_league-kbo') || []);
 	const [isLoading, setIsLoading] = useState(leagues.length === 0);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -19,7 +19,7 @@ const LeagueSearchPage: React.FC = () => {
 		try {
 			setIsLoading(true);
 			setErrorMessage(null);
-			const data = await db.getYearlyLeagues('kbo');
+			const data = await db.getYearlyLeagues('league-kbo');
 			setLeagues(data);
 		} catch (e) {
 			console.error("데이터 로드 실패:", e);

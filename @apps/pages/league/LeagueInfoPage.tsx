@@ -6,6 +6,7 @@ import BatterInput from '@sit-val/components/BatterInput';
 import RunnerInput from '@sit-val/components/RunnerInput';
 import { BatterStatsData } from '@sit-val/types/BatterStats';
 import { RunnerStats } from '@sit-val/types/RunnerStats';
+import { BatterStats } from '@sit-val/types/BatterStats';
 import { VisualizerList } from '../../features/visualizer/components/VisualizerList';
 
 interface LeagueInfoPageProps {
@@ -97,6 +98,10 @@ const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
 		[editorToolOptions, toolOptions]
 	);
 
+	const commonItemProps = React.useMemo(() => ({
+		batterStats: new BatterStats(leagueBatterStats)
+	}), [leagueBatterStats]);
+
 	React.useEffect(() => {
 		if (!startInEditMode) return;
 		if (activeTools.some((tool) => tool.type.startsWith('league-') && tool.type.endsWith('-editor'))) return;
@@ -123,6 +128,7 @@ const LeagueInfoPage: React.FC<LeagueInfoPageProps> = ({
 				<VisualizerList 
 					tools={activeTools} 
 					data={vizData} 
+					commonItemProps={commonItemProps}
 					onToolsSync={setActiveTools}
 					toolOptions={allToolOptions}
 					onAddTool={addTool}

@@ -18,7 +18,7 @@
 }
 
 input {
-    font-family: 'KBO-Dia-Gothic_medium', Arial, sans-serif;
+    font-family: 'Giants', Arial, sans-serif;
     font-size: 16px;
 }
 
@@ -29,7 +29,7 @@ input[type=file] {
 input[type=file]::file-selector-button{
     background-color: var(--primary-color);;
     color: white;
-    font-family: 'KBO-Dia-Gothic_medium', Arial, sans-serif;
+    font-family: 'Giants', Arial, sans-serif;
     border: none;
     padding: 6px 12px;
     border-radius: 5px;

@@ -2,25 +2,25 @@
 
 ## Goal
 
-* 계정 설정 패널은 VisualizerList 안에 유지하되 삭제되지 않도록 보호한다.
+* 리그 목록 페이지가 홈과 다르게 빈 상태로 보이는 원인을 확인하고 현재 데이터 구조와 맞게 수정한다.
 
 ## Plan
 
-* [x] 계정 설정 패널이 삭제되는 진입점을 확인한다.
-* [x] 계정 설정 패널에 삭제 금지 플래그를 적용한다.
-* [x] VisualizerList 공용 패널 삭제 경로도 같은 플래그를 존중하도록 막는다.
+* [x] 홈과 리그 목록 페이지의 조회 경로를 비교해 불일치 원인을 확인한다.
+* [x] 현재 DB 식별자 구조에 맞게 리그 목록 조회 키를 수정한다.
 * [x] 빌드 1회로 결과를 검증하고 `working.md`에 반영한다.
 
 ## Progress
 
-* 계정 설정 패널은 VisualizerList 내부 패널로 유지 중이다.
-* 공용 패널 그룹에서 `lockRemove` 플래그가 있는 항목은 삭제 버튼을 숨기고, 내부 제거 경로에서도 차단하도록 조정했다.
-* 계정 설정 패널 옵션에 `lockRemove: true`를 추가해 실수로 지워지지 않게 했다.
+* 홈은 `getRecentYearlyLeagues()`로 전체 `league_seasons`에서 최근 항목을 읽는다.
+* 리그 목록 페이지는 `getYearlyLeagues('kbo')`와 `yearlyLeagues_kbo` 캐시를 사용하고 있었다.
+* 현재 seed와 저장 구조에서 `league_seasons.league_id`는 `'league-kbo'` 형식이라 `'kbo'` 필터는 항상 비게 된다.
+* 리그 목록 페이지의 조회 키와 캐시 키를 실제 저장 식별자 `'league-kbo'`로 맞췄다.
 * `npm run build` 1회 실행 결과 성공했다.
 
 ## Decisions
 
-* 계정 설정은 VisualizerList 패널로 유지하되 삭제는 막는다.
+* 이번 수정은 리그 목록 조회 키 불일치만 바로잡고, 목록 구조 자체는 바꾸지 않는다.
 
 ## Pending
 
@@ -66,3 +66,7 @@
 * 2026-06-26: Unified the entire account page under VisualizerList panels including account settings
 * 2026-06-26: Stabilized account panel option references to prevent VisualizerList empty-layout warnings and update loops
 * 2026-06-26: Locked account settings panel removal while keeping it inside VisualizerList
+* 2026-06-26: Unified global font declarations to Giants to remove nav/content font mismatch
+* 2026-06-26: Synced LeaguePage tool initialization and runner stats persistence with current page architecture
+* 2026-06-26: Removed legacy BottomSheet editing from league personal visualizer and wired it to panel-based editing
+* 2026-06-26: Fixed LeagueSearchPage using outdated league code instead of current league id

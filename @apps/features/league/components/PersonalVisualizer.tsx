@@ -1,6 +1,5 @@
-import React, { useState, useRef, useMemo } from 'react';
-import BatterInput, { BatterInputHandle } from '@sit-val/components/BatterInput';
-import { Div, H3, Button, BottomSheet, vars } from '@shared/bridges/UIBridge';
+import React, { useMemo } from 'react';
+import { Div, H3, vars } from '@shared/bridges/UIBridge';
 import { BatterStatsData, BatterStats } from '@sit-val/types/BatterStats';
 import { RECalculationResult } from '../api/re-league';
 import { WOBAWeights } from '@sit-val/lib/sabermetrics/calc';
@@ -11,24 +10,21 @@ interface PersonalVisualizerProps {
 }
 
 const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data, batterStats: propsBatterStats }) => {
-  const [internalBatterStats, setInternalBatterStats] = useState<BatterStatsData>({
-    '1B': 65, '2B': 23, '3B': 0, hr: 56,
-    bb: 111, so: 89, go: 117, fo: 135,
-    sf: 6, sh: 0, hbp: 0, pa: 596
-  });
-
-  const [isBatterOpen, setIsBatterOpen] = useState(false);
-  const batterRef = useRef<BatterInputHandle>(null);
+  if (!propsBatterStats) {
+    return (
+      <Div style={{ padding: '20px', textAlign: 'center' }}>
+        <H3 style={{ fontSize: '1em', marginBottom: '10px' }}>개인 타격 가치</H3>
+        <p style={{ color: '#666', fontSize: '0.9em' }}>
+          패널 편집에서 리그 타격 성적을 설정하면 개인 가치가 표시됩니다.
+        </p>
+      </Div>
+    );
+  }
 
   if (!data || !data[0] || !data[1]) return null;
   const [ret, weights, lgWobaRaw, wOBAScale, runPerPa] = data;
 
-  // 주입받은 props가 있으면 그것을, 없으면 내부 상태를 사용
-  const stats = useMemo(() => new BatterStats(propsBatterStats || internalBatterStats), [propsBatterStats, internalBatterStats]);
-
-  const handleBatterChange = (newStats: BatterStatsData) => {
-    setInternalBatterStats(newStats);
-  };
+  const stats = useMemo(() => new BatterStats(propsBatterStats), [propsBatterStats]);
 
   const calculateWoba = () => {
     if (!weights || !stats) return 0;
@@ -119,16 +115,6 @@ const PersonalVisualizer: React.FC<PersonalVisualizerProps> = ({ data, batterSta
           </Div>
         </Div>
       </Div>
-
-      {!propsBatterStats && (
-        <Button className="neumorphism-Button" onClick={() => setIsBatterOpen(true)}>
-          대상 선수 성적 수정
-        </Button>
-      )}
-
-      <BottomSheet isOpen={isBatterOpen} onClose={() => setIsBatterOpen(false)} title="대상 타자 성적 설정">
-        <BatterInput ref={batterRef} initialStats={internalBatterStats} onDataChange={handleBatterChange} id="personal-batter-analysis-input" />
-      </BottomSheet>
     </Div>
   );
 };

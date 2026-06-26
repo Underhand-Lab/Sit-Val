@@ -47,6 +47,7 @@ export function useLeaguePageModel(id: string | undefined, fromId: string | null
       if (cached) {
         setYearlyLeagueData(cached);
         setLeagueBatterStats(cached.stats);
+        setLeagueRunnerStats(cached.runnerStats || INITIAL_RUNNER_STATS);
         setSelectedYear(cached.year);
         setLeagueIdInput(cached.leagueId);
         setIsLoading(false);
@@ -58,6 +59,7 @@ export function useLeaguePageModel(id: string | undefined, fromId: string | null
       if (data) {
         setYearlyLeagueData(data);
         setLeagueBatterStats(data.stats);
+        setLeagueRunnerStats(data.runnerStats || INITIAL_RUNNER_STATS);
         setSelectedYear(data.year);
         setLeagueIdInput(data.leagueId);
       }
@@ -105,7 +107,13 @@ export function useLeaguePageModel(id: string | undefined, fromId: string | null
     }
 
     const actualId = id === 'new' ? (fromId || '') : id || '';
-    const leagueData = { id: actualId, leagueId: leagueIdInput, year: selectedYear, stats: { ...leagueBatterStats, r: 0, rbi: 0 } };
+    const leagueData = {
+      id: actualId,
+      leagueId: leagueIdInput,
+      year: selectedYear,
+      stats: { ...leagueBatterStats, r: 0, rbi: 0 },
+      runnerStats: leagueRunnerStats,
+    };
     const result = await db.saveYearlyLeague(leagueData);
     return result.id;
   }, [fromId, id, leagueBatterStats, leagueIdInput, leagueRunnerStats, navigate, selectedYear]);
